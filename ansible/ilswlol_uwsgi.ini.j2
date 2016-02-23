@@ -1,0 +1,8 @@
+[uwsgi]
+home = {{ site_path }}/venv
+chdir = {{ site_path }}
+module = ilswlol
+callable = app
+plugins = python
+env = TELEGRAM_HOME=/var/lib/ilswlol
+env = TG_PATH={{ site_path }}/externals/tg

@@ -1,0 +1,14 @@
+server {
+    listen  80;
+    listen  [::]:80;
+    server_name ist-lukas-schon-wach.lol;
+    root    /srv/http/pub/ist-lukas-schon-wach.lol;
+
+    access_log  /var/log/nginx/ist-lukas-schon-wach.lol/access.log;
+    error_log   /var/log/nginx/ist-lukas-schon-wach.lol/error.log;
+
+    location / {
+        include uwsgi_params;
+        uwsgi_pass unix:/run/uwsgi/ilswlol.sock;
+    }
+}
