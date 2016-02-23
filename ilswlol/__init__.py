@@ -51,7 +51,6 @@ def ist_lukas_schon_wach():
     else:
         tg_path = os.environ.get('TG_PATH')
 
-    tg_path = path.join(path.dirname(sys.executable), "..", "..", "externals", "tg")
     tg_cli_path = path.join(tg_path, "bin", "telegram-cli")
     tg_pubkey_path = path.join(tg_path, "tg-server.pub")
     json_contacts = subprocess.run([tg_cli_path, "-k", tg_pubkey_path,
@@ -86,8 +85,6 @@ def index():
         wach_confidence = ist_lukas_schon_wach()
         cache.set('ist_lukas_schon_wach', wach_confidence, timeout=5 * 60)
 
-    print(request.args)
-    print(request.args.get('raw'))
     if wach_confidence >= 50:
         if request.args.get('raw'):
             return "JA"
