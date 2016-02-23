@@ -66,6 +66,8 @@ def ist_lukas_schon_wach():
             # Check whether Lukas has been online recently and assign confidence
             if delta < timedelta(minutes=5):
                 confidence += 70
+            if delta < timedelta(minutes=45):
+                confidence += 50
             elif delta < timedelta(hours=1):
                 confidence += 40
             elif delta < timedelta(hours=3):
