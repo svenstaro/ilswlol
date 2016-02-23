@@ -1,0 +1,5 @@
+flask
+requests
+beautifulsoup4
+dateparser
+jdatetime==1.7.2
