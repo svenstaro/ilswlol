@@ -6,10 +6,12 @@ import requests
 import bs4
 import dateparser
 from datetime import datetime, timedelta
+from werkzeug.contrib.cache import SimpleCache
 
-from flask import Flask
+from flask import Flask, request, render_template
 
 app = Flask(__name__)
+cache = SimpleCache()
 
 def ist_lukas_schon_wach():
     confidence = 0
@@ -68,10 +70,23 @@ def ist_lukas_schon_wach():
 
 @app.route("/")
 def index():
-    if ist_lukas_schon_wach() >= 50:
-        return "JA"
+    wach_confidence = cache.get('ist_lukas_schon_wach')
+    if wach_confidence is None:
+        wach_confidence = ist_lukas_schon_wach()
+        cache.set('ist_lukas_schon_wach', wach_confidence, timeout=5 * 60)
+
+    print(request.args)
+    print(request.args.get('raw'))
+    if wach_confidence >= 50:
+        if request.args.get('raw'):
+            return "JA"
+        else:
+            return render_template('index.html', schon_wach=True)
     else:
-        return "NEIN"
+        if request.args.get('raw'):
+            return "NEIN"
+        else:
+            return render_template('index.html', schon_wach=False)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
