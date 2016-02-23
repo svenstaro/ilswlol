@@ -1,4 +1,5 @@
 import sys
+import os
 from os import path
 import subprocess
 import json
@@ -12,6 +13,7 @@ from flask import Flask, request, render_template
 
 app = Flask(__name__)
 cache = SimpleCache()
+
 
 def ist_lukas_schon_wach():
     confidence = 0
@@ -41,6 +43,14 @@ def ist_lukas_schon_wach():
             confidence += 20
 
     # Check using telegram
+
+    # For development purposes, figure out the path ourselves
+    tg_path = None
+    if os.environ.get('TG_PATH') is None:
+        tg_path = path.join(path.dirname(sys.executable), "..", "..", "externals", "tg")
+    else:
+        tg_path = os.environ.get('TG_PATH')
+
     tg_path = path.join(path.dirname(sys.executable), "..", "..", "externals", "tg")
     tg_cli_path = path.join(tg_path, "bin", "telegram-cli")
     tg_pubkey_path = path.join(tg_path, "tg-server.pub")
@@ -67,6 +77,7 @@ def ist_lukas_schon_wach():
             break
 
     return confidence
+
 
 @app.route("/")
 def index():
