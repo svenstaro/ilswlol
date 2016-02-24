@@ -6,14 +6,15 @@ import json
 import requests
 import bs4
 import dateparser
+import tempfile
 from datetime import datetime, timedelta
-from werkzeug.contrib.cache import SimpleCache
+from werkzeug.contrib.cache import FileSystemCache
 
 from flask import Flask, request, render_template
 
 app = Flask(__name__)
-cache = SimpleCache()
-
+cache_dir = tempfile.TemporaryDirectory("ilswlol")
+cache = FileSystemCache(cache_dir.name)
 
 def ist_lukas_schon_wach():
     confidence = 0
