@@ -78,17 +78,17 @@ def ist_lukas_schon_wach():
 
             break
 
-    return confidence
+    return confidence >= 50
 
 
 @app.route("/")
 def index():
-    wach_confidence = cache.get('ist_lukas_schon_wach')
-    if wach_confidence is None:
-        wach_confidence = ist_lukas_schon_wach()
-        cache.set('ist_lukas_schon_wach', wach_confidence, timeout=5 * 60)
+    schon_wach = cache.get('ist_lukas_schon_wach')
+    if schon_wach is None:
+        schon_wach = ist_lukas_schon_wach()
+        cache.set('ist_lukas_schon_wach', schon_wach, timeout=5 * 60)
 
-    if wach_confidence >= 50:
+    if schon_wach:
         if request.args.get('raw'):
             return "JA"
         else:
