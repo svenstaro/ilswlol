@@ -27,7 +27,9 @@ def ist_lukas_schon_wach():
     online_offline_info = soup.find(class_='responsive_status_info')
 
     # Check whether user is online or offline right now
-    if online_offline_info.find_all(text='Currently Online') or online_offline_info.find_all(text=re.compile('Online using')):
+    if online_offline_info.find_all(text='Currently Online') or \
+       online_offline_info.find_all(text=re.compile('Online using')) or \
+       online_offline_info.find_all(text=re.compile('Currently In-Game')):
         # If he's online in steam now, we're pretty confident
         confidence += 70
     else:
