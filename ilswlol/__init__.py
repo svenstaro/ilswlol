@@ -57,10 +57,21 @@ def ist_lukas_schon_wach():
 
     tg_cli_path = path.join(tg_path, "bin", "telegram-cli")
     tg_pubkey_path = path.join(tg_path, "tg-server.pub")
-    json_contacts = subprocess.run([tg_cli_path, "-k", tg_pubkey_path,
+
+    tg_output = None
+    # Retry a few times in case the token has expired
+    attempt = 3
+    success = False
+    while attempt > 0 and not success:
+        tg_output = subprocess.run([tg_cli_path, "-k", tg_pubkey_path,
                                     "-e", "contact_list", "--json", "-D", "-R"],
                                    stdout=subprocess.PIPE)
-    split_contacts = json_contacts.stdout.splitlines()[0].decode("utf-8")
+        if tg_output.returncode != 0:
+            attempt -= 1
+        else:
+            success = True
+
+    split_contacts = tg_output.stdout.splitlines()[0].decode("utf-8")
     parsed_contacts = json.loads(split_contacts)
     for contact in parsed_contacts:
         if 'username' in contact and contact['username'] == 'lukasovich':
