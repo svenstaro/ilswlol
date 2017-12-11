@@ -1,11 +1,10 @@
 server {
     listen  80;
     listen  [::]:80;
-    server_name ist-lukas-schon-wach.lol;
-    root    /srv/http/pub/ist-lukas-schon-wach.lol;
+    server_name {{ site_url }};
 
-    access_log  /var/log/nginx/ist-lukas-schon-wach.lol/access.log;
-    error_log   /var/log/nginx/ist-lukas-schon-wach.lol/error.log;
+    access_log  /var/log/nginx/{{ site_url }}/access.log;
+    error_log   /var/log/nginx/{{ site_url }}/error.log;
 
     location / {
         include uwsgi_params;

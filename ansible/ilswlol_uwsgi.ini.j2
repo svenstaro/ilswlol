@@ -1,8 +1,17 @@
 [uwsgi]
-home = {{ site_path }}/venv
-chdir = {{ site_path }}
+uid = http
+gid = http
+master = true
+processes = 8
+ksm = 10
+vacuum = true
+socket = /run/uwsgi/{{ site_url }}.sock
+logto = /var/log/uwsgi/{{ site_url }}.log
+plugins = python
 module = ilswlol
 callable = app
-plugins = python
-env = TELEGRAM_HOME=/var/lib/ilswlol
-env = TG_PATH={{ site_path }}/externals/tg
+chdir = {{ site_path }}
+home = {{ site_path }}/venv
+{% for envvar in envvars.split('\n').split(' ') %}
+env = {{ envvar }}
+{% endfor %}

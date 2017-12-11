@@ -64,4 +64,4 @@ venv
 
 # local dev stuff
 *.session
-local_env.sh
+secrets
