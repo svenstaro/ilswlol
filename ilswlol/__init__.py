@@ -14,7 +14,8 @@ cache_dir = tempfile.TemporaryDirectory(prefix="ilswlol-")
 cache = FileSystemCache(cache_dir.name)
 
 
-client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'])
+client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'],
+                        spawn_read_thread=False)
 client.connect()
 
 
