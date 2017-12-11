@@ -1,23 +1,47 @@
 import sys
+import logging
 import os
-import re
 from os import path
-import subprocess
+import re
+import getpass
 import json
 import requests
 import bs4
 import dateparser
 import tempfile
+from telethon import TelegramClient
+from telethon.errors import SessionPasswordNeededError
 from datetime import datetime, timedelta
 from werkzeug.contrib.cache import FileSystemCache
-
 from flask import Flask, request, render_template
 
 app = Flask(__name__)
 cache_dir = tempfile.TemporaryDirectory(prefix="ilswlol-")
 cache = FileSystemCache(cache_dir.name)
+logging.basicConfig(level=logging.INFO)
 
-def ist_lukas_schon_wach():
+
+# Initialize Telegram
+logging.info("Connecting to Telegram...")
+client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'])
+client.connect()
+logging.info("Logging in to Telegram...")
+if not client.is_user_authorized():
+    logging.info("User unauthorized")
+    client.send_code_request(os.environ['TG_PHONE'])
+    code_ok = False
+    while not code_ok:
+        code = input('Enter the auth code: ')
+        try:
+            code_ok = client.sign_in(os.environ['TG_PHONE'], code)
+        except SessionPasswordNeededError:
+            password = getpass('Two step verification enabled. '
+                               'Please enter your password: ')
+            code_ok = client.sign_in(password=password)
+logging.info("Client initialized succesfully")
+
+
+def get_steam_confidence():
     confidence = 0
 
     # Check using steam profile
@@ -46,51 +70,37 @@ def ist_lukas_schon_wach():
         elif delta < timedelta(hours=7):
             confidence += 20
 
-    # Check using telegram
+    return confidence
 
-    # For development purposes, figure out the path ourselves
-    tg_path = None
-    if os.environ.get('TG_PATH') is None:
-        tg_path = path.join(path.dirname(sys.executable), "..", "..", "externals", "tg")
-    else:
-        tg_path = os.environ.get('TG_PATH')
 
-    tg_cli_path = path.join(tg_path, "bin", "telegram-cli")
-    tg_pubkey_path = path.join(tg_path, "tg-server.pub")
+def get_telegram_confidence():
+    confidence = 0
 
-    tg_output = None
-    # Retry a few times in case the token has expired
-    attempt = 3
-    success = False
-    while attempt > 0 and not success:
-        tg_output = subprocess.run([tg_cli_path, "-k", tg_pubkey_path,
-                                    "-e", "contact_list", "--json", "-D", "-R"],
-                                   stdout=subprocess.PIPE)
-        if tg_output.returncode != 0:
-            attempt -= 1
-        else:
-            success = True
+    lukas = client.get_entity('lukasovich')
+    date = lukas.status.was_online
+    delta = datetime.utcnow() - date
 
-    split_contacts = tg_output.stdout.splitlines()[0].decode("utf-8")
-    parsed_contacts = json.loads(split_contacts)
-    for contact in parsed_contacts:
-        if 'username' in contact and contact['username'] == 'lukasovich':
-            date = dateparser.parse(contact['when'])
-            delta = datetime.utcnow() - date
+    # Check whether Lukas has been online recently and assign confidence
+    if delta < timedelta(minutes=5):
+        confidence += 70
+    if delta < timedelta(minutes=45):
+        confidence += 50
+    elif delta < timedelta(hours=1):
+        confidence += 40
+    elif delta < timedelta(hours=3):
+        confidence += 30
+    elif delta < timedelta(hours=7):
+        confidence += 20
 
-            # Check whether Lukas has been online recently and assign confidence
-            if delta < timedelta(minutes=5):
-                confidence += 70
-            if delta < timedelta(minutes=45):
-                confidence += 50
-            elif delta < timedelta(hours=1):
-                confidence += 40
-            elif delta < timedelta(hours=3):
-                confidence += 30
-            elif delta < timedelta(hours=7):
-                confidence += 20
+    return confidence
 
-            break
+
+def ist_lukas_schon_wach():
+    # Get initial confidence from Steam
+    confidence = get_steam_confidence()
+
+    # Get more confidence from Telegram
+    confidence += get_telegram_confidence()
 
     return confidence >= 50
 
@@ -112,6 +122,7 @@ def index():
             return "NEIN"
         else:
             return render_template('index.html', schon_wach=False)
+
 
 if __name__ == "__main__":
     app.run()

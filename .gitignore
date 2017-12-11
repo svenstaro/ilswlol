@@ -61,3 +61,7 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 venv
+
+# local dev stuff
+*.session
+local_env.sh

@@ -1,12 +1,9 @@
-.PHONY: clean tg default
+.PHONY: clean default venv run
 
-default: tg pyvenv
+default: venv
 
-tg:
-	cd externals/tg; ./configure; make -j
-
-pyvenv:
-	pyvenv venv
+venv:
+	python -m venv venv
 	venv/bin/pip install --upgrade -r requirements.txt
 
 run:
