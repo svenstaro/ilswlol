@@ -5,6 +5,8 @@ import bs4
 import dateparser
 import tempfile
 from telethon import TelegramClient
+from telethon.tl.types import UserStatusOnline
+from telethon.tl.types import UserStatusOffline
 from datetime import datetime, timedelta
 from werkzeug.contrib.cache import FileSystemCache
 from flask import Flask, request, render_template
@@ -55,7 +57,10 @@ def get_telegram_confidence():
     confidence = 0
 
     lukas = client.get_entity('lukasovich')
-    date = lukas.status.was_online
+    if lukas.status == UserStatusOnline:
+        date = datetime.utcnow()
+    else:
+        date = lukas.status.was_online
     delta = datetime.utcnow() - date
 
     # Check whether Lukas has been online recently and assign confidence
