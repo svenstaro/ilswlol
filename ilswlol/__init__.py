@@ -3,17 +3,12 @@ import re
 import requests
 import bs4
 import dateparser
-import tempfile
 from telethon import TelegramClient
 from telethon.tl.types import UserStatusOnline
-from telethon.tl.types import UserStatusOffline
 from datetime import datetime, timedelta
-from werkzeug.contrib.cache import FileSystemCache
 from flask import Flask, request, render_template
 
 app = Flask(__name__)
-cache_dir = tempfile.TemporaryDirectory(prefix="ilswlol-")
-cache = FileSystemCache(cache_dir.name)
 
 
 client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'],
@@ -62,6 +57,7 @@ def get_telegram_confidence():
     else:
         date = lukas.status.was_online
     delta = datetime.utcnow() - date
+    print(delta)
 
     # Check whether Lukas has been online recently and assign confidence
     if delta < timedelta(minutes=5):
@@ -90,11 +86,7 @@ def ist_lukas_schon_wach():
 
 @app.route("/")
 def index():
-    schon_wach = cache.get('ist_lukas_schon_wach')
-    if schon_wach is None:
-        schon_wach = ist_lukas_schon_wach()
-        cache.set('ist_lukas_schon_wach', schon_wach, timeout=5 * 60)
-
+    schon_wach = ist_lukas_schon_wach()
     if schon_wach:
         if request.args.get('raw'):
             return "JA"
