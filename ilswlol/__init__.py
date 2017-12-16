@@ -57,7 +57,6 @@ def get_telegram_confidence():
     else:
         date = lukas.status.was_online
     delta = datetime.utcnow() - date
-    print(delta)
 
     # Check whether Lukas has been online recently and assign confidence
     if delta < timedelta(minutes=5):
