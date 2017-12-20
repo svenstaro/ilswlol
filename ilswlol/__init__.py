@@ -3,6 +3,7 @@ import re
 import requests
 import bs4
 import dateparser
+import logging
 from telethon import TelegramClient
 from telethon.tl.types import UserStatusOnline
 from datetime import datetime, timedelta
@@ -14,6 +15,9 @@ app = Flask(__name__)
 client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'],
                         spawn_read_thread=False)
 client.connect()
+
+
+logging.basicConfig(level='INFO')
 
 
 def get_steam_confidence():
@@ -75,12 +79,18 @@ def get_telegram_confidence():
 
 def ist_lukas_schon_wach():
     # Get initial confidence from Steam
-    confidence = get_steam_confidence()
+    steam_confidence = get_steam_confidence()
 
     # Get more confidence from Telegram
-    confidence += get_telegram_confidence()
+    telegram_confidence = get_telegram_confidence()
 
-    return confidence >= 50
+    confidence = steam_confidence + telegram_confidence
+    ist_wach = confidence >= 50
+
+    logging.info(f"Reporting ist wach '{ist_wach}' with steam confidence {steam_confidence} "
+                 f"and telegram confidence {telegram_confidence}. Total confidence {confidence}.")
+
+    return ist_wach
 
 
 @app.route("/")
