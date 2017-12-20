@@ -65,7 +65,7 @@ def get_telegram_confidence():
     # Check whether Lukas has been online recently and assign confidence
     if delta < timedelta(minutes=5):
         confidence += 70
-    if delta < timedelta(minutes=45):
+    elif delta < timedelta(minutes=45):
         confidence += 50
     elif delta < timedelta(hours=1):
         confidence += 40
