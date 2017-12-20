@@ -56,7 +56,7 @@ def get_telegram_confidence():
     confidence = 0
 
     lukas = client.get_entity('lukasovich')
-    if lukas.status == UserStatusOnline:
+    if type(lukas.status) == UserStatusOnline:
         date = datetime.utcnow()
     else:
         date = lukas.status.was_online
