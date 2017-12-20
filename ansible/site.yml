@@ -19,11 +19,16 @@
          repo=git://github.com/svenstaro/ilswlol.git
          dest={{ site_path }}
 
+  - name: install dependencies
+    pip:
+      state: latest
+      requirements: requirements.txt
+      virtualenv: '{{ site_path }}/venv'
+      virtualenv_python: 'python3'
+      chdir: '{{ site_path }}'
+
   - name: create nginx log directory
     file: owner=http group=log mode=750 state=directory path=/var/log/nginx/{{ site_url }}
-
-  - name: create app dir
-    file: owner=http group=http mode=750 state=directory path={{ site_url }}
 
   - name: configure uwsgi
     template: src=ilswlol_uwsgi.ini.j2 dest=/etc/uwsgi/{{ site_url }}.ini owner=root group=http mode=640
