@@ -58,7 +58,7 @@ def get_steam_confidence():
 def get_telegram_confidence():
     confidence = 0
 
-    lukas = client.get_entity('lukasovich')
+    lukas = client.get_entity('lukasovich', force_fetch=True)
     if type(lukas.status) == UserStatusOnline:
         date = datetime.utcnow()
         logging.debug("Currently online in telegram.")
