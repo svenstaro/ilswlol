@@ -14,10 +14,11 @@ app = Flask(__name__)
 
 client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'],
                         spawn_read_thread=False)
-client.connect()
+if not client.connect():
+    raise RuntimeError("Couldn't connect to Telegram. Check network and credentials.")
 
 
-logging.basicConfig(level='INFO')
+logging.basicConfig(level='DEBUG')
 
 
 def get_steam_confidence():
@@ -35,11 +36,13 @@ def get_steam_confidence():
        online_offline_info.find_all(text=re.compile('Currently In-Game')):
         # If he's online in steam now, we're pretty confident
         confidence += 70
+        logging.debug("Currently online in steam.")
     else:
         last_online = online_offline_info.find(class_='profile_in_game_name').string
         last_online_date = last_online.replace('Last Online ', '')
         date = dateparser.parse(last_online_date)
         delta = datetime.utcnow() - date
+        logging.debug(f"Last seen in steam at {date}.")
 
         # Check whether Lukas has been online recently and assign confidence
         if delta < timedelta(hours=1):
@@ -58,8 +61,10 @@ def get_telegram_confidence():
     lukas = client.get_entity('lukasovich')
     if type(lukas.status) == UserStatusOnline:
         date = datetime.utcnow()
+        logging.debug("Currently online in telegram.")
     else:
         date = lukas.status.was_online
+        logging.debug(f"Last seen in telegram at {date}.")
     delta = datetime.utcnow() - date
 
     # Check whether Lukas has been online recently and assign confidence
