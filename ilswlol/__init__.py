@@ -5,6 +5,7 @@ import bs4
 import dateparser
 import logging
 import tempfile
+import humanize
 from telethon import TelegramClient
 from telethon.tl.types import UserStatusOnline
 from telethon.errors.rpc_error_list import FloodWaitError
@@ -23,7 +24,7 @@ if not client.connect():
     raise RuntimeError("Couldn't connect to Telegram. Check network and credentials.")
 
 
-logging.basicConfig(level='DEBUG')
+logging.basicConfig(level='DEBUG', format='%(asctime)s %(levelname)s:%(name)s - %(message)s')
 
 
 def get_steam_confidence():
@@ -69,7 +70,8 @@ def get_telegram_confidence():
         logging.debug("Currently online in telegram.")
     else:
         date = lukas.status.was_online
-        logging.debug(f"Last seen in telegram at {date}.")
+        human_delta = humanize.naturaltime(datetime.utcnow() - date)
+        logging.debug(f"Last seen in telegram at {date} ({human_delta}).")
     delta = datetime.utcnow() - date
 
     # Check whether Lukas has been online recently and assign confidence
@@ -107,11 +109,16 @@ def ist_lukas_schon_wach():
 def index():
     schon_wach = cache.get('ist_lukas_schon_wach')
     if schon_wach is None:
+        logging.info("Cache is expired, querying data sources.")
         try:
             schon_wach = ist_lukas_schon_wach()
             cache.set('ist_lukas_schon_wach', schon_wach, timeout=5 * 60)
         except FloodWaitError:
+            logging.critical("Too many requests!")
             return "pls stop requests :("
+    else:
+        logging.info("Fetched from cache.")
+
 
     if schon_wach:
         if request.args.get('raw'):
