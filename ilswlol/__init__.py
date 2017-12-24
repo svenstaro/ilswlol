@@ -27,6 +27,11 @@ if not client.connect():
 logging.basicConfig(level='DEBUG', format='%(asctime)s %(levelname)s:%(name)s - %(message)s')
 
 
+def is_curl_like(user_agent_string):
+    curl_likes = ["HTTPie", "curl"]
+    return any([tool in user_agent_string for tool in curl_likes])
+
+
 def get_steam_confidence():
     confidence = 0
 
@@ -119,14 +124,13 @@ def index():
     else:
         logging.info("Fetched from cache.")
 
-
     if schon_wach:
-        if request.args.get('raw'):
+        if is_curl_like(request.user_agent.string) or request.args.get('raw'):
             return "JA"
         else:
             return render_template('index.html', schon_wach=True)
     else:
-        if request.args.get('raw'):
+        if is_curl_like(request.user_agent.string) or request.args.get('raw'):
             return "NEIN"
         else:
             return render_template('index.html', schon_wach=False)
