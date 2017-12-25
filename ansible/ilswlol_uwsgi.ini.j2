@@ -3,6 +3,7 @@ uid = http
 gid = http
 master = true
 processes = 8
+threads = 8
 ksm = 10
 vacuum = true
 socket = /run/uwsgi/{{ site_url }}.sock
