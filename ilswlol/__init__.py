@@ -1,21 +1,19 @@
 import os
 import re
+import logging
+
 import requests
 import bs4
 import dateparser
-import logging
-import tempfile
 import humanize
+import uwsgi
 from telethon import TelegramClient
 from telethon.tl.types import UserStatusOnline
 from telethon.errors.rpc_error_list import FloodWaitError
 from datetime import datetime, timedelta
 from flask import Flask, request, render_template
-from werkzeug.contrib.cache import FileSystemCache
 
 app = Flask(__name__)
-cache_dir = tempfile.TemporaryDirectory(prefix="ilswlol-")
-cache = FileSystemCache(cache_dir.name)
 
 
 client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'],
@@ -112,16 +110,17 @@ def ist_lukas_schon_wach():
 
 @app.route("/")
 def index():
-    schon_wach = cache.get('ist_lukas_schon_wach')
+    schon_wach = uwsgi.cache_get('ist_lukas_schon_wach')
     if schon_wach is None:
         logging.info("Cache is expired, querying data sources.")
         try:
             schon_wach = ist_lukas_schon_wach()
-            cache.set('ist_lukas_schon_wach', schon_wach, timeout=5 * 60)
+            uwsgi.cache_set('ist_lukas_schon_wach', bytes(schon_wach), 5 * 60)
         except FloodWaitError:
             logging.critical("Too many requests!")
             return "pls stop requests :("
     else:
+        schon_wach = bool(schon_wach)
         logging.info("Fetched from cache.")
 
     if schon_wach:

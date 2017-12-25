@@ -12,6 +12,7 @@ module = ilswlol
 callable = app
 chdir = {{ site_path }}
 home = {{ site_path }}/venv
+cache2 = name=ilswlol,items=100
 {% for envvar in envvars.split('\n') %}
 env = {{ envvar }}
 {% endfor %}
