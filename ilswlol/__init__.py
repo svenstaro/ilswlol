@@ -94,6 +94,8 @@ def get_steam_confidence():
         confidence = 30
     elif delta < timedelta(hours=7):
         confidence = 20
+    else:
+        confidence = 0
 
     return confidence
 
