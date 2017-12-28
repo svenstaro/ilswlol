@@ -2,7 +2,7 @@ import csv
 import random
 from datetime import datetime, timedelta
 
-timestamps = 10000
+timestamps = 1000
 
 
 class Lukas():
@@ -25,7 +25,7 @@ class Lukas():
 
         if self.current_dt > self.sleep_end + self.minimal_wake_duration:
             # Figure out the day to wake up on.
-            self.sleep_end = self.current_dt.replace(hour=wake_up_hour, minute=0, second=0)
+            self.sleep_end = self.current_dt.replace(hour=wake_up_hour, minute=0, second=0, microsecond=0)
             if self.current_dt > self.sleep_end:
                 self.sleep_end += timedelta(days=1)
 

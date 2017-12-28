@@ -6,13 +6,21 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 
-torch.manual_seed(1)
-
 lukas_frame = pd.read_csv('lukas.csv')
 
+dtype = torch.FloatTensor
+if torch.cuda.is_available():
+    print("CUDA available, running on GPU")
+    dtype = torch.cuda.DoubleTensor
+
 input_tensor = torch.from_numpy(lukas_frame[["timestamp", "awakeness_confidence"]].values)
-timestamps = Variable(input_tensor).float()[:, :1]
-target_confidences = Variable(input_tensor).float()[:, 1:2]
+timestamps = Variable(input_tensor).type(dtype)[:, :1]
+timestamps = timestamps.unsqueeze(1)
+time_of_day = Variable(dtype([(datetime.fromtimestamp(x) - datetime.fromtimestamp(x).replace(hour=0, minute=0, second=0, microsecond=0)).seconds / 86400 for x in timestamps]))
+print(time_of_day)
+time_of_day = time_of_day.unsqueeze(1).unsqueeze(1)
+# time_of_day = Variable(torch.randn(1000, 1, 1).type(dtype))
+target_confidences = Variable(input_tensor).type(dtype)[:, 1:2]
 
 
 class LukasLSTM(nn.Module):
@@ -20,30 +28,29 @@ class LukasLSTM(nn.Module):
         super(LukasLSTM, self).__init__()
         self.hidden_dim = hidden_dim
 
-        self.lstm = nn.LSTM(input_dim, self.hidden_dim)
+        self.lstm = nn.LSTM(input_dim, self.hidden_dim).type(dtype)
+        self.lstm.cuda()
 
         # Linear layer to map from hidden state space to confidence space.
-        self.hidden_to_confidence = nn.Linear(self.hidden_dim, 1)
+        self.hidden_to_confidence = nn.Linear(self.hidden_dim, 1).type(dtype)
         self.init_hidden()
 
     def init_hidden(self):
         # Initialize hidden state.
-        self.hidden = (Variable(torch.zeros(1, 1, self.hidden_dim)),
-                       Variable(torch.zeros(1, 1, self.hidden_dim)))
+        self.hidden = (Variable(torch.randn(1, 1, self.hidden_dim).type(dtype)),
+                       Variable(torch.randn(1, 1, self.hidden_dim).type(dtype)))
 
     def forward(self, inputs):
-        output, self.hidden = self.lstm(inputs, self.hidden)
-        output = self.hidden_to_confidence(output)
-        return output
+        lstm_output, self.hidden = self.lstm(inputs, self.hidden)
+        final_output = self.hidden_to_confidence(lstm_output)
+        return final_output
 
 
 hidden_dim = 24  # Maybe it can find 24h patterns?
-lukas_model = LukasLSTM(1, hidden_dim)
-loss = nn.MSELoss()
-optimizer = optim.LBFGS(lukas_model.parameters(), lr=0.8)
-
-confidences = lukas_model(timestamps)
-print(confidences)
+lukas_model = LukasLSTM(1, hidden_dim).cuda()
+criterion = nn.MSELoss()
+criterion.cuda()
+optimizer = optim.LBFGS(lukas_model.parameters(), lr=0.05)
 
 for epoch in range(15):
     print(f"Step {epoch}")
@@ -51,13 +58,14 @@ for epoch in range(15):
     def closure():
         lukas_model.zero_grad()
 
-        lukas_model.hidden = lukas_model.init_hidden()
+        lukas_model.init_hidden()
 
-        confidences = lukas_model(timestamps)
+        confidences = lukas_model(time_of_day)
 
-        output = loss(confidences, target_confidences)
-        output.backward()
-        return output
+        loss = criterion(confidences, target_confidences)
+        print(f'loss: {loss.data.cpu().numpy()[0]}')
+        loss.backward()
+        return loss
     optimizer.step(closure)
 
 # Draw the result.
@@ -69,8 +77,8 @@ plt.ylabel('awakeness_confidence', fontsize=20)
 plt.xticks(fontsize=20)
 plt.yticks(fontsize=20)
 # Show last 1000 values in training set and predicted 1000 values.
-known_x = list(map(datetime.fromtimestamp, timestamps[9000:].data.numpy()))
-known_y = target_confidences[9000:].data.numpy()
+known_x = list(map(datetime.fromtimestamp, timestamps.data.cpu().numpy()))
+known_y = target_confidences.data.cpu().numpy()
 
 # Get the delta between two datetimes
 delta = known_x[-1] - known_x[-2]
@@ -79,11 +87,11 @@ future = 1000
 extrapolated_x = [known_x[-1] + delta]
 for i in range(future - 1):
     extrapolated_x.append(extrapolated_x[-1] + delta)
-extrapolated_x_variable = Variable(torch.FloatTensor([x.timestamp() for x in extrapolated_x]))
+extrapolated_x_variable = Variable(dtype([x.timestamp() for x in extrapolated_x]))
 # Predict the future!
-predicted_confidences = lukas_model(extrapolated_x_variable.view(-1, 1))
-print(confidences)
+predicted_confidences = lukas_model(extrapolated_x_variable.unsqueeze(1).unsqueeze(1))
+print(predicted_confidences)
 plt.plot_date(known_x, known_y, linewidth=2.0, fmt="b-")
-plt.plot_date(extrapolated_x, predicted_confidences.view(-1).data.numpy(), linewidth=2.0, fmt="r:")
+plt.plot_date(extrapolated_x, predicted_confidences.view(-1).data.cpu().numpy(), linewidth=2.0, fmt="r:")
 plt.xticks(rotation=25)
-plt.show()
+plt.savefig("graph.png")
