@@ -29,7 +29,8 @@ class LukasLSTM(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.lstm = nn.LSTM(input_dim, self.hidden_dim).type(dtype)
-        self.lstm.cuda()
+        if torch.cuda.is_available():
+            self.lstm.cuda()
 
         # Linear layer to map from hidden state space to confidence space.
         self.hidden_to_confidence = nn.Linear(self.hidden_dim, 1).type(dtype)
@@ -47,9 +48,11 @@ class LukasLSTM(nn.Module):
 
 
 hidden_dim = 24  # Maybe it can find 24h patterns?
-lukas_model = LukasLSTM(1, hidden_dim).cuda()
+lukas_model = LukasLSTM(1, hidden_dim)
 criterion = nn.MSELoss()
-criterion.cuda()
+if torch.cuda.is_available():
+    lukas_model.cuda()
+    criterion.cuda()
 optimizer = optim.LBFGS(lukas_model.parameters(), lr=0.05)
 
 for epoch in range(15):
