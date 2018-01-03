@@ -13,4 +13,4 @@ clean:
 	rm -r venv
 
 watch:
-	watchexec -e py venv/bin/python train.py
+	watchexec -e py python train.py
