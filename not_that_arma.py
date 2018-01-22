@@ -2,8 +2,9 @@ import math
 import datetime
 import numpy
 import csv
+import matplotlib.pyplot as plt
 
-DAYS_NUMERATION = {1:"Monday", 2:"Tuesday", 3:"Wednesday", 4:"Thursday", 5:"Friday", 6:"Saturday", 7:"Sunday"}
+DAYS_NUMERATION = {0:"Monday", 1:"Tuesday", 2:"Wednesday", 3:"Thursday", 4:"Friday", 5:"Saturday", 6:"Sunday"}
 
 def extract_features(timestamp):
     """ Unpacks the features of a given timestamp
@@ -13,7 +14,7 @@ def extract_features(timestamp):
     returns: 1x2 vector ["day of the week", "time of the day"]
     """
     datetime_obj = datetime.datetime.fromtimestamp(float(timestamp))
-    day_of_the_week = datetime_obj.day
+    day_of_the_week = datetime_obj.weekday()
     time_of_the_day = datetime_obj.hour
 
     return numpy.array([day_of_the_week, time_of_the_day])
@@ -63,89 +64,145 @@ def create_and_train(X, Y, iterations):
      number of hidden layers set to 1
      using RELU for 1 hidden layer activation and sigmoid for prediction
 
-     @X: features input vector
-     @Y: expected output
+     :param X: features input vector
+     :param Y: expected output
 
-     return: model parameters W, b
+     :return: model parameters W, b
      """
 
     hidden_units = 2
     learning_rate = 0.02
-    m = X.shape[1]
 
     # init params
-    W1 = numpy.random.rand(X.shape[0], hidden_units)
-    print("W1 shape is",W1.shape)
-    b1 = numpy.zeros((hidden_units, m))
-    print("b1 shape is",b1.shape)
-    W2 = numpy.random.rand(hidden_units, Y.shape[0])
-    print("W2 shape is",W2.shape)
-    b2 = numpy.zeros((1, 1))
-    print("b2 shape is",b2.shape)
-
-    delta_cost = 0
+    params = init_params(X, Y, hidden_units)
+    W1 = params["W1"]
+    b1 = params["b1"]
+    W2 = params["W2"]
+    b2 = params["b2"]
 
     for i in range(0, iterations):
-        # forward prop
-        Z1 = numpy.dot(W1.T, X) + b1
-        # print("Z1 shape is",Z1.shape)
-        A1 = numpy.maximum(Z1, 0)
-        # print("A1 shape is", A1.shape)
-        Z2 = numpy.dot(W2.T, A1) + b2
-        # print("Z2 shape is",Z2.shape)
-        A2 = sigmoid(Z2) # this is our predictor in probabilities
-        # print("A2 shape is", A2.shape)
-
-        # compute cost
-        log_part1 = Y * numpy.log(A2)
-        log_part2 = (1 - Y) * numpy.log(1 - A2)
-        cost = -1 * numpy.sum(log_part1 + log_part2, axis=1, keepdims=True)
-        delta_cost += cost
-        print("delta cost is {}".format(delta_cost))
-        # backprop
-        dZ2 = A2 - Y
-        # print("dZ2 shape is", dZ2.shape)
-        dW2 = numpy.dot(A1, dZ2.T) / m
-        # print("dW2 shape is", dW2.shape)
-        db2 = numpy.sum(dZ2, axis=1, keepdims=True) / m
-        # print("db2 shape is", db2.shape)
-        dA1 = numpy.dot(W2, dZ2)
-        # print("dA1 shape is", dA1.shape)
-        dZ1 = numpy.dot(W2, dZ2)
-        # print("dZ1 shape is", dZ1.shape)
-        dW1 = numpy.dot(dZ1, X.T) / m
-        # print("dW1 shape is", dW1.shape)
-        db1 = numpy.sum(dZ1, axis=1, keepdims=True) / m
-        # print("db1 shape is", db1.shape)
-
+        # forward propagation
+        cost, cache = forward_prop(X, Y, params)
+        # backward propagation
+        gardients = back_prop(X, Y, cache)
         # update weights
-        W1 = W1 - learning_rate * dW1
-        W2 = W2 - learning_rate * dW2
-        b1 = b1 - learning_rate * db1
-        b2 = b2 - learning_rate * db2
+        params["W1"] -= learning_rate * gardients["dW1"]
+        params["W2"] -= learning_rate * gardients["dW2"]
+        params["b1"] -= learning_rate * gardients["db1"]
+        params["b2"] -= learning_rate * gardients["db2"]
+
+
 
     model = {"W1": W1, "W2": W2, "b1": b1, "b2": b2}
     return model
 
-def classify(X_test, Y_test, model):
-    Z1 = numpy.dot(model['W1'].T, X_test) + model['b1']
-    A1 = numpy.max(Z1, 0)
-    Z2 = numpy.dot(model['W2'].T, A1) + model['b2']
-    A2 = sigmoid(Z2) # this is our predictor in probabilities
+def init_params(X, Y, hidden_units):
+    """
+    The architrcture is fixed
+    :param X: input
+    :param Y: output
+    :param hidden_units: 1 hidden layer with 2 units
+    :return: dict containing params of the model
+    """
+    params = {}
+    params["W1"] = numpy.random.rand( hidden_units, X.shape[0])
+    params["b1"] = numpy.zeros((hidden_units, 1))
+    params["W2"] = numpy.random.rand(Y.shape[0], hidden_units)
+    params["b2"] = numpy.zeros((1, 1))
 
-    cost = -1 * numpy.sum(Y_test * numpy.log(A2), (1 - Y_test) * numpy.log(1 - A2))
-    print("Cost is {}".format(cost))
+    return params
 
-    for i in  range(len(A2)):
-        print("Predicted {} where expected was {}".format(A2[i], Y_test[i]))
 
-    return A2
+def forward_prop(X, Y, params):
+    """
+    Compute prediction of the network
+    :param X: input
+    :param Y: output
+    :param params: dict containing needed NN params
+    :return: (float) cost and (tuple) all  final params
+    """
+    m = X.shape[1]
+    W1 = params["W1"]
+    b1 = params["b1"]
+    W2 = params["W2"]
+    b2 = params["b2"]
 
+    # RELU
+    Z1 = numpy.dot(W1, X) + b1
+    A1 = numpy.maximum(Z1, 0)
+    # sigmoid
+    Z2 = numpy.dot(W2, A1) + b2
+    A2 = sigmoid(Z2)
+
+    # compute cost
+    cost = (-1 * numpy.sum(numpy.multiply(numpy.log(A2), Y) + numpy.multiply(numpy.log(1 - A2), 1 - Y))) / m
+
+    cache = (Z1, A1, W1, b1, Z2, A2, W2, b2)
+
+    return cost, cache
+
+
+def back_prop(X, Y, params):
+    """
+    computes the gradients of the params
+    :param X: input
+    :param Y: output
+    :param params: tuple containing params to compute gradient of
+    :return: dict params gradients
+    """
+    m = X.shape[1]
+    (Z1, A1, W1, b1, Z2, A2, W2, b2) = params
+
+    dZ2 = A2 - Y
+    dW2 = 1. / m * numpy.dot(dZ2, A1.T) * 2
+    db2 = 1. / m * numpy.sum(dZ2, axis=1, keepdims=True)
+
+    dA1 = numpy.dot(W2.T, dZ2)
+    dZ1 = numpy.multiply(dA1, numpy.int64(A1 > 0))
+    dW1 = 1. / m * numpy.dot(dZ1, X.T)
+    db1 = 4. / m * numpy.sum(dZ1, axis=1, keepdims=True)
+
+    gradients = {"dZ2": dZ2, "dW2": dW2, "db2": db2,
+                 "dA1": dA1, "dZ1": dZ1, "dW1": dW1, "db1": db1}
+
+    return gradients
+
+
+def predict(X, model):
+    """
+    computes the outcome of the given NN
+    :param X: input
+    :param model: all computed params
+    :return: prediction.shape = (X.shape[1], 1)
+    """
+    Z1 = numpy.dot(model["W1"], X) + model["b1"]
+    A1 = numpy.maximum(Z1, 0)
+    # sigmoid
+    Z2 = numpy.dot(model["W2"], A1) + model["b2"]
+    A2 = sigmoid(Z2)
+
+    res = []
+    for i in range(0,A2.shape[1]):
+        if A2[0][i] > 0.7:
+            res.append(1)
+        else:
+            res.append(0)
+    return res
+
+
+def plot_results(timestamps, A, B):
+    t = [i for i in range(len(A))]
+    # predicted
+    plt.plot(t, A, linewidth=3.0, color="blue")
+    # actual
+    plt.plot(t, B, linewidth=1.0, color="red")
+    plt.show()
 
 if __name__ == '__main__':
-    # i will try a low percision time first time is split into 24 categories
     X_train, Y_train = create_input_structure('training_set.csv')
+
     model = create_and_train(X_train, Y_train, 500)
     X_test, Y_test = create_input_structure('validation_set.csv')
-    predict = classify(X_test, Y_test, model)
+    predicted = predict(X_test, model)
 
+    plot_results(None, predicted,  Y_test[0])
