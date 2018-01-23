@@ -52,7 +52,7 @@ def transform_probability(x):
     else:
         return 0
 
-def create_and_train(X, Y, iterations, seeded=False):
+def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
     """ Simple numpy implementation of a shallow NN training process:
      1. initialize parameters
      2. forward prop
@@ -70,7 +70,6 @@ def create_and_train(X, Y, iterations, seeded=False):
      :return: model parameters W, b
      """
 
-    hidden_units = 12
     learning_rate = 0.02
 
     # init params
@@ -81,8 +80,8 @@ def create_and_train(X, Y, iterations, seeded=False):
         # forward propagation
         cost, cache = forward_prop(X, Y, params)
         # compute accuracy
-        if i % 50 == 0:
-            print("Step {} accuarcy is: {}".format(i, compute_accuracy(cache[5], Y)))
+        # if i % 50 == 0:
+        #     print("Step {} accuarcy is: {}".format(i, compute_accuracy(cache[5], Y)))
 
         # backward propagation
         gardients = back_prop(X, Y, cache)
@@ -242,22 +241,23 @@ def plot_results(timestamps, A, B):
 
 if __name__ == '__main__':
     X_train, Y_train = create_input_structure('training_set.csv')
-    model, accuracy_train = create_and_train(X_train, Y_train, 500, True)
+    model, accuracy_train = create_and_train_shallow_nn(X_train, Y_train, 500, 12, True)
     print("train accuracy is: {}".format(accuracy_train))
     X_test, Y_test = create_input_structure('validation_set.csv')
     predicted = predict(X_test, model, False)
+    predicted2 = predict(X_test, model, True)
     accuracy_test = compute_accuracy(predicted, Y_test)
     print("test accuracy is: {}".format(accuracy_test))
 
-    # the model has a very high bias but very low variance =>
+    # the model with 2 units in a hidden layer has a very high bias but very low variance =>
     # accuracy on both train and test sets is awful, but test set performs better =>
     # this model can generilize well
     # since it is bias problem we need to increase data amount won't help
     # but increased amount of features and increased architecture might
 
-    # TODO 1: add more features into X (increase dimensionality)
-    # TODO 2: increase amount of units in the hidden layer -> keep shallow
-    # TODO 3: create bias/variance check-loop until the accuracy is sufficient
+    # TODO: create bias/variance check-loop until the accuracy is sufficient
+    # TODO: add more features into X (increase dimensionality)
+    # TODO: increase amount of units in the hidden layer -> keep shallow
 
 
-    plot_results(None, predicted.T,  Y_test[0])
+  `  plot_results(None, predicted2.T,  Y_test[0])
