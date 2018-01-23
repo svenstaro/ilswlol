@@ -70,7 +70,7 @@ def create_and_train(X, Y, iterations, seeded=False):
      :return: model parameters W, b
      """
 
-    hidden_units = 2
+    hidden_units = 12
     learning_rate = 0.02
 
     # init params
@@ -108,7 +108,7 @@ def init_params(X, Y, hidden_units, seeded=False):
     :return: dict containing params of the model
     """
     if seeded:
-        numpy.random.seed(12)
+        numpy.random.seed(345)
     params = {}
     params["W1"] = numpy.random.rand( hidden_units, X.shape[0])
     params["b1"] = numpy.zeros((hidden_units, 1))
@@ -249,4 +249,15 @@ if __name__ == '__main__':
     accuracy_test = compute_accuracy(predicted, Y_test)
     print("test accuracy is: {}".format(accuracy_test))
 
-    # plot_results(None, predicted,  Y_test[0])
+    # the model has a very high bias but very low variance =>
+    # accuracy on both train and test sets is awful, but test set performs better =>
+    # this model can generilize well
+    # since it is bias problem we need to increase data amount won't help
+    # but increased amount of features and increased architecture might
+
+    # TODO 1: add more features into X (increase dimensionality)
+    # TODO 2: increase amount of units in the hidden layer -> keep shallow
+    # TODO 3: create bias/variance check-loop until the accuracy is sufficient
+
+
+    plot_results(None, predicted.T,  Y_test[0])
