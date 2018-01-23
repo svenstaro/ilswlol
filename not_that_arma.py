@@ -52,7 +52,7 @@ def transform_probability(x):
     else:
         return 0
 
-def create_and_train(X, Y, iterations):
+def create_and_train(X, Y, iterations, seeded=False):
     """ Simple numpy implementation of a shallow NN training process:
      1. initialize parameters
      2. forward prop
@@ -74,15 +74,16 @@ def create_and_train(X, Y, iterations):
     learning_rate = 0.02
 
     # init params
-    params = init_params(X, Y, hidden_units)
-    W1 = params["W1"]
-    b1 = params["b1"]
-    W2 = params["W2"]
-    b2 = params["b2"]
-
+    params = init_params(X, Y, hidden_units, seeded)
+    cache = ()
+    accuracy = 0
     for i in range(0, iterations):
         # forward propagation
         cost, cache = forward_prop(X, Y, params)
+        # compute accuracy
+        if i % 50 == 0:
+            print("Step {} accuarcy is: {}".format(i, compute_accuracy(cache[5], Y)))
+
         # backward propagation
         gardients = back_prop(X, Y, cache)
         # update weights
@@ -92,11 +93,13 @@ def create_and_train(X, Y, iterations):
         params["b2"] -= learning_rate * gardients["db2"]
 
 
+    accuracy = compute_accuracy(cache[5], Y)
 
-    model = {"W1": W1, "W2": W2, "b1": b1, "b2": b2}
-    return model
+    model = {"W1":  params["W1"], "W2":  params["W2"], "b1": params["b1"], "b2": params["b2"]}
+    return model, accuracy
 
-def init_params(X, Y, hidden_units):
+
+def init_params(X, Y, hidden_units, seeded=False):
     """
     The architrcture is fixed
     :param X: input
@@ -104,6 +107,8 @@ def init_params(X, Y, hidden_units):
     :param hidden_units: 1 hidden layer with 2 units
     :return: dict containing params of the model
     """
+    if seeded:
+        numpy.random.seed(12)
     params = {}
     params["W1"] = numpy.random.rand( hidden_units, X.shape[0])
     params["b1"] = numpy.zeros((hidden_units, 1))
@@ -168,11 +173,12 @@ def back_prop(X, Y, params):
     return gradients
 
 
-def predict(X, model):
+def predict(X, model, convert=True, confidence_level=0.7):
     """
     computes the outcome of the given NN
     :param X: input
     :param model: all computed params
+    :param confidence_level: the probability threshold
     :return: prediction.shape = (X.shape[1], 1)
     """
     Z1 = numpy.dot(model["W1"], X) + model["b1"]
@@ -181,13 +187,49 @@ def predict(X, model):
     Z2 = numpy.dot(model["W2"], A1) + model["b2"]
     A2 = sigmoid(Z2)
 
+    if convert:
+        res = []
+        for i in range(0,A2.shape[1]):
+            if A2[0][i] > 0.7:
+                res.append(1)
+            else:
+                res.append(0)
+        return numpy.array([res])
+    else:
+        return A2
+
+
+def compute_accuracy(prediction, Y, confidence_level=0.7):
+    """
+    Computes accuracy for a computed model on a given set
+    https://en.wikipedia.org/wiki/Confusion_matrix
+    :param X: input matrix
+    :param Y: output vector
+    :return: (float) accuracy
+    """
     res = []
-    for i in range(0,A2.shape[1]):
-        if A2[0][i] > 0.7:
+    for i in range(0,prediction.shape[1]):
+        if prediction[0][i] > 0.7:
             res.append(1)
         else:
             res.append(0)
-    return res
+    res = numpy.array([res])
+    # to avoid some computational misteries
+    assert prediction.shape == Y.shape
+
+    FN = 0
+    TP = 0
+    for i in range(0, prediction.shape[1]):
+        if res[0][i] == 0 and Y[0][i] == res[0][i]:
+            FN += 1
+        elif res[0][i] == 1 and Y[0][i] == res[0][i]:
+            TP += 1
+        else:
+            pass
+    accuracy = (FN + TP) / Y.shape[1]
+
+    return accuracy
+
 
 
 def plot_results(timestamps, A, B):
@@ -200,9 +242,11 @@ def plot_results(timestamps, A, B):
 
 if __name__ == '__main__':
     X_train, Y_train = create_input_structure('training_set.csv')
-
-    model = create_and_train(X_train, Y_train, 500)
+    model, accuracy_train = create_and_train(X_train, Y_train, 500, True)
+    print("train accuracy is: {}".format(accuracy_train))
     X_test, Y_test = create_input_structure('validation_set.csv')
-    predicted = predict(X_test, model)
+    predicted = predict(X_test, model, False)
+    accuracy_test = compute_accuracy(predicted, Y_test)
+    print("test accuracy is: {}".format(accuracy_test))
 
-    plot_results(None, predicted,  Y_test[0])
+    # plot_results(None, predicted,  Y_test[0])
