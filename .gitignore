@@ -68,3 +68,6 @@ secrets
 
 # Ansible stuff
 *.retry
+
+# PyCharm
+.idea/

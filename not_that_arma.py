@@ -1,23 +1,8 @@
 import math
-import datetime
 import numpy
 import csv
 import matplotlib.pyplot as plt
-
-DAYS_NUMERATION = {0:"Monday", 1:"Tuesday", 2:"Wednesday", 3:"Thursday", 4:"Friday", 5:"Saturday", 6:"Sunday"}
-
-def extract_features(timestamp):
-    """ Unpacks the features of a given timestamp
-
-    @timestamp: datetime.timestamp
-
-    returns: 1x2 vector ["day of the week", "time of the day"]
-    """
-    datetime_obj = datetime.datetime.fromtimestamp(float(timestamp))
-    day_of_the_week = datetime_obj.weekday()
-    time_of_the_day = datetime_obj.hour
-
-    return numpy.array([day_of_the_week, time_of_the_day])
+import data_preprocessor as preprocess
 
 
 def create_input_structure(filename):
@@ -36,7 +21,7 @@ def create_input_structure(filename):
         next(raw_data)
         reader = csv.reader(raw_data, delimiter=',')
         for row in reader:
-            X.append(extract_features(row[0]))
+            X.append(preprocess.extract_features(row[0]))
             Y.append(math.floor(float(row[1])))
 
     return numpy.array(X).T, numpy.array([Y])
@@ -51,51 +36,6 @@ def transform_probability(x):
         return 1
     else:
         return 0
-
-def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
-    """ Simple numpy implementation of a shallow NN training process:
-     1. initialize parameters
-     2. forward prop
-     3. cost function
-     4. backward prop
-     5. update the weights
-     learning rate is fixed to=0.02,
-     number of hidden units set to 2,
-     number of hidden layers set to 1
-     using RELU for 1 hidden layer activation and sigmoid for prediction
-
-     :param X: features input vector
-     :param Y: expected output
-
-     :return: model parameters W, b
-     """
-
-    learning_rate = 0.02
-
-    # init params
-    params = init_params(X, Y, hidden_units, seeded)
-    cache = ()
-    accuracy = 0
-    for i in range(0, iterations):
-        # forward propagation
-        cost, cache = forward_prop(X, Y, params)
-        # compute accuracy
-        # if i % 50 == 0:
-        #     print("Step {} accuarcy is: {}".format(i, compute_accuracy(cache[5], Y)))
-
-        # backward propagation
-        gardients = back_prop(X, Y, cache)
-        # update weights
-        params["W1"] -= learning_rate * gardients["dW1"]
-        params["W2"] -= learning_rate * gardients["dW2"]
-        params["b1"] -= learning_rate * gardients["db1"]
-        params["b2"] -= learning_rate * gardients["db2"]
-
-
-    accuracy = compute_accuracy(cache[5], Y)
-
-    model = {"W1":  params["W1"], "W2":  params["W2"], "b1": params["b1"], "b2": params["b2"]}
-    return model, accuracy
 
 
 def init_params(X, Y, hidden_units, seeded=False):
@@ -230,7 +170,6 @@ def compute_accuracy(prediction, Y, confidence_level=0.7):
     return accuracy
 
 
-
 def plot_results(timestamps, A, B):
     t = [i for i in range(len(A))]
     # predicted
@@ -238,6 +177,53 @@ def plot_results(timestamps, A, B):
     # actual
     plt.plot(t, B, linewidth=1.0, color="red")
     plt.show()
+
+
+def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
+    """ Simple numpy implementation of a shallow NN training process:
+     1. initialize parameters
+     2. forward prop
+     3. cost function
+     4. backward prop
+     5. update the weights
+     learning rate is fixed to=0.02,
+     number of hidden units set to 2,
+     number of hidden layers set to 1
+     using RELU for 1 hidden layer activation and sigmoid for prediction
+
+     :param X: features input vector
+     :param Y: expected output
+
+     :return: model parameters W, b
+     """
+
+    learning_rate = 0.02
+
+    # init params
+    params = init_params(X, Y, hidden_units, seeded)
+    cache = ()
+    accuracy = 0
+    for i in range(0, iterations):
+        # forward propagation
+        cost, cache = forward_prop(X, Y, params)
+        # compute accuracy
+        # if i % 50 == 0:
+        #     print("Step {} accuarcy is: {}".format(i, compute_accuracy(cache[5], Y)))
+
+        # backward propagation
+        gardients = back_prop(X, Y, cache)
+        # update weights
+        params["W1"] -= learning_rate * gardients["dW1"]
+        params["W2"] -= learning_rate * gardients["dW2"]
+        params["b1"] -= learning_rate * gardients["db1"]
+        params["b2"] -= learning_rate * gardients["db2"]
+
+
+    accuracy = compute_accuracy(cache[5], Y)
+
+    model = {"W1":  params["W1"], "W2":  params["W2"], "b1": params["b1"], "b2": params["b2"]}
+    return model, accuracy
+
 
 if __name__ == '__main__':
     X_train, Y_train = create_input_structure('training_set.csv')
@@ -248,16 +234,15 @@ if __name__ == '__main__':
     predicted2 = predict(X_test, model, True)
     accuracy_test = compute_accuracy(predicted, Y_test)
     print("test accuracy is: {}".format(accuracy_test))
+    #
+    # # the model with 2 units in a hidden layer has a very high bias but very low variance =>
+    # # accuracy on both train and test sets is awful, but test set performs better =>
+    # # this model can generilize well
+    # # since it is bias problem we need to increase data amount won't help
+    # # but increased amount of features and increased architecture might
+    #
+    # # TODO: create bias/variance check-loop until the accuracy is sufficient
+    # # TODO: increase amount of units in the hidden layer -> keep shallow
+    #
+    plot_results(None, predicted2.T,  Y_test[0])
 
-    # the model with 2 units in a hidden layer has a very high bias but very low variance =>
-    # accuracy on both train and test sets is awful, but test set performs better =>
-    # this model can generilize well
-    # since it is bias problem we need to increase data amount won't help
-    # but increased amount of features and increased architecture might
-
-    # TODO: create bias/variance check-loop until the accuracy is sufficient
-    # TODO: add more features into X (increase dimensionality)
-    # TODO: increase amount of units in the hidden layer -> keep shallow
-
-
-  `  plot_results(None, predicted2.T,  Y_test[0])
