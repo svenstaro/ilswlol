@@ -43,8 +43,10 @@ https://www.jura.uni-hamburg.de/en/service/termine.html
     wtbe = datetime.date(2016, 4, 3)
 
     # is in lectures
-    summer_lectures = (sls <= transformed and transformed <= sle) and not (sbs <= transformed and transformed <= sbe)
-    winter_lectures = (wls <= transformed and transformed <= wle) and not (wbs <= transformed and transformed <= wbe)
+    summer_lectures = ((sls <= transformed and transformed <= sle)
+                       and not (sbs <= transformed and transformed <= sbe))
+    winter_lectures = ((wls <= transformed and transformed <= wle)
+                       and not (wbs <= transformed and transformed <= wbe))
     # is in session
     summer_session = (sss <= transformed and transformed <= sse)
     winter_session = (wss <= transformed and transformed <= wse)
@@ -90,18 +92,5 @@ def extract_features(timestamp):
     season = get_season(datetime_obj.month)
     uni_phase = university_phase(datetime_obj)
 
-    # print("Timestamp {}/{} is interpreted as: "
-    #       "{}, "
-    #       "{} hours, "
-    #       "{} season, "
-    #       "{} is the uni phase".format(timestamp, datetime_obj, DAYS_NUMERATION[day_of_the_week],
-    #                             time_of_the_day, SEASONS[season],
-    #                             UNIVERSITY_CYCLE[uni_phase]))
-    #
     return numpy.array([day_of_the_week, time_of_the_day,
                         season, uni_phase])
-
-
-if __name__ == '__main__':
-    # extract_features(1483457569.379064)
-    pass

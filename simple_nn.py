@@ -6,14 +6,15 @@ import data_preprocessor as preprocess
 
 
 def create_input_structure(filename):
-    """ Reads out the data from the original file
-        create proper feature vector
-        shape should be (features, num_examples)
+    """
+    Reads out the data from the original file
+    create proper feature vector
+    shape should be (features, num_examples)
 
-        @filename: file containing the data
+    @filename: file containing the data
 
-        returns: X - numpy.array containing the features,
-                 Y - numpy vector containing the actual stand
+    returns: X - numpy.array containing the features,
+             Y - numpy vector containing the actual stand
     """
     X = []
     Y = []
@@ -38,23 +39,23 @@ def transform_probability(x):
         return 0
 
 
-def init_params(X, Y, hidden_units, seeded=False):
+def init_params(X, Y, hidden_units, seeded=False, seed=345):
     """
-    The architrcture is fixed
+    The architecture is fixed
     :param X: input
     :param Y: output
     :param hidden_units: 1 hidden layer with 2 units
     :return: dict containing params of the model
     """
     if seeded:
-        numpy.random.seed(345)
+        numpy.random.seed(seed)
     params = {}
     params["W1"] = numpy.random.rand( hidden_units, X.shape[0])
     params["b1"] = numpy.zeros((hidden_units, 1))
     params["W2"] = numpy.random.rand(Y.shape[0], hidden_units)
     params["b2"] = numpy.zeros((1, 1))
 
-    return params
+    return params, seed
 
 
 def forward_prop(X, Y, params):
@@ -197,7 +198,7 @@ def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
      :return: model parameters W, b
      """
 
-    learning_rate = 0.02
+    learning_rate = 0.01
 
     # init params
     params = init_params(X, Y, hidden_units, seeded)
@@ -222,27 +223,31 @@ def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
     accuracy = compute_accuracy(cache[5], Y)
 
     model = {"W1":  params["W1"], "W2":  params["W2"], "b1": params["b1"], "b2": params["b2"]}
-    return model, accuracy
+    return model, accuracy, seed
 
+
+def save_model(model):
+    with(open)
 
 if __name__ == '__main__':
     X_train, Y_train = create_input_structure('training_set.csv')
-    model, accuracy_train = create_and_train_shallow_nn(X_train, Y_train, 500, 12, True)
+    model, accuracy_train = create_and_train_shallow_nn(X_train, Y_train, 5000, 12, True)
     print("train accuracy is: {}".format(accuracy_train))
     X_test, Y_test = create_input_structure('validation_set.csv')
     predicted = predict(X_test, model, False)
     predicted2 = predict(X_test, model, True)
     accuracy_test = compute_accuracy(predicted, Y_test)
     print("test accuracy is: {}".format(accuracy_test))
-    #
-    # # the model with 2 units in a hidden layer has a very high bias but very low variance =>
-    # # accuracy on both train and test sets is awful, but test set performs better =>
-    # # this model can generilize well
-    # # since it is bias problem we need to increase data amount won't help
-    # # but increased amount of features and increased architecture might
-    #
-    # # TODO: create bias/variance check-loop until the accuracy is sufficient
-    # # TODO: increase amount of units in the hidden layer -> keep shallow
-    #
+
+
     plot_results(None, predicted2.T,  Y_test[0])
 
+    # so, technically I am very bad in judging whether Lukas is already awake
+    # this is why this bot actually exists -> we don;t have an expert estimate
+    # thus we do not an avoidable bias, so let's say 93%-95% accuracy will be sufficient
+    # however we have quite a variance problem: increase data amount would be one of the first steps
+    # decreased learning rate and increased amount of the iterations brought almost the desired boost
+    # TODO: train model on 5 times bigger data set (?)
+    # TODO: allow deeper networks with that takes a dict in key: number of the hidden layer, value: number of the units in the layer
+    # TODO: make models persistent -> save to an external file the weight matrix and the init seed
+    # TODO: do I want to implement ADAM or GD with momentum?
