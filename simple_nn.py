@@ -125,13 +125,17 @@ def back_prop(X, Y, params, cache):
 
 
 def update_params(params, grads, learning_rate):
-    res = params.copy()
-    res["W1"] -= learning_rate * grads["dW1"]
-    res["W2"] -= learning_rate * grads["dW2"]
-    res["b1"] -= learning_rate * grads["db1"]
-    res["b2"] -= learning_rate * grads["db2"]
-
-    return res
+    """
+    Update weights
+    :param params: dict with model parameters
+    :param grads: dict with params changes
+    :param learning_rate: float decrease ratio
+    :return: None
+    """
+    params["W1"] -= learning_rate * grads["dW1"]
+    params["W2"] -= learning_rate * grads["dW2"]
+    params["b1"] -= learning_rate * grads["db1"]
+    params["b2"] -= learning_rate * grads["db2"]
 
 
 def predict(X, model, convert=True, confidence_level=0.7):
@@ -230,14 +234,10 @@ def create_and_train_shallow_nn(X, Y, learning_rate, iterations, hidden_units, s
     for i in range(0, iterations):
         # forward propagation
         cost, cache = forward_prop(X, Y, params, len(hidden_units.keys()))
-        # compute accuracy
-        # if i % 50 == 0:
-        #     print("Step {} accuarcy is: {}".format(i, compute_accuracy(cache[5], Y)))
-
         # backward propagation
-        gardients = back_prop(X, Y, params.values(), cache.values())
+        gradients = back_prop(X, Y, params.values(), cache.values())
         # update weights
-        params = update_params(params, gardients, learning_rate)
+        update_params(params, gradients, learning_rate)
 
 
     accuracy = compute_accuracy(cache["A2"], Y)
