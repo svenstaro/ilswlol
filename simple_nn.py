@@ -47,19 +47,20 @@ def init_params(X, Y, hidden_units, seeded=False, seed=345):
     :param X: input
     :param Y: output
     :param hidden_units: dict describing the architecture
-    :return: dict containing params of the model
+    :return: dict containing params of the model, int seed
     """
+    m = X.shape[0]
+
     if seeded:
         numpy.random.seed(seed)
-    # all params have
-    params = {}
-    for layer in list(hidden_units.keys())[:-1]:
-        params["W{}".format(layer)] = numpy.random.rand(hidden_units[layer], X.shape[0])
-        params["b{}".format(layer)] = numpy.zeros((hidden_units[layer], 1))
 
-    last_layer = max(hidden_units.keys())
-    params["W{}".format(last_layer)] = numpy.random.rand(Y.shape[0], hidden_units[last_layer-1])
-    params["b{}".format(last_layer)] = numpy.zeros((1, 1))
+    params = {}
+    for layer in list(hidden_units.keys()):
+        # special treatment for the first layer init
+        if layer > 1:
+            m = hidden_units[layer-1]
+        params["W"+str(layer)] = numpy.random.rand(hidden_units[layer], m)
+        params["b"+str(layer)] = numpy.zeros((hidden_units[layer], 1))
 
     return params, seed
 
@@ -86,7 +87,8 @@ def forward_prop(X, Y, params):
     A2 = sigmoid(Z2)
 
     # compute cost
-    cost = (-1 * numpy.sum(numpy.multiply(numpy.log(A2), Y) + numpy.multiply(numpy.log(1 - A2), 1 - Y))) / m
+    cost = ((-1 * numpy.sum(numpy.multiply(numpy.log(A2), Y)
+                            + numpy.multiply(numpy.log(1 - A2), 1 - Y))) / m)
 
     cache = (Z1, A1, W1, b1, Z2, A2, W2, b2)
 
