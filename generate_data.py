@@ -33,7 +33,7 @@ class Lukas():
             sleep_length_offset = random.gauss(0, 0.5)
             sleep_length = timedelta(hours=8 + sleep_length_offset)
             self.sleep_start = self.sleep_end - sleep_length
-            print(f"Next sleep is from {self.sleep_start} to {self.sleep_end}")
+            print("Next sleep is from {} to {}".format(self.sleep_start, self.sleep_end))
 
     def get_awakeness_confidence(self):
         if self.sleep_start <= self.current_dt <= self.sleep_end:
@@ -59,3 +59,6 @@ with open('lukas.csv', 'w') as csvfile:
             'timestamp': lukas.current_dt.timestamp(),
             'awakeness_confidence': lukas.get_awakeness_confidence(),
         })
+
+if __name__ == '__main__':
+    pass

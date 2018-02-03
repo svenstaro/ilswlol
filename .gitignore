@@ -71,3 +71,6 @@ secrets
 
 # PyCharm
 .idea/
+
+# models folder
+models/

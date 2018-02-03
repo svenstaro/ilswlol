@@ -1,8 +1,10 @@
 import math
 import numpy
 import csv
+import json
+import logging
 import matplotlib.pyplot as plt
-import data_preprocessor as preprocess
+import data_processor as process
 
 
 def create_input_structure(filename):
@@ -22,7 +24,7 @@ def create_input_structure(filename):
         next(raw_data)
         reader = csv.reader(raw_data, delimiter=',')
         for row in reader:
-            X.append(preprocess.extract_features(row[0]))
+            X.append(process.extract_features(row[0]))
             Y.append(math.floor(float(row[1])))
 
     return numpy.array(X).T, numpy.array([Y])
@@ -154,7 +156,7 @@ def compute_accuracy(prediction, Y, confidence_level=0.7):
         else:
             res.append(0)
     res = numpy.array([res])
-    # to avoid some computational misteries
+    # to avoid some computational mysteries
     assert prediction.shape == Y.shape
 
     FN = 0
@@ -180,7 +182,7 @@ def plot_results(timestamps, A, B):
     plt.show()
 
 
-def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
+def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seed, seeded=False):
     """ Simple numpy implementation of a shallow NN training process:
      1. initialize parameters
      2. forward prop
@@ -201,7 +203,7 @@ def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
     learning_rate = 0.01
 
     # init params
-    params = init_params(X, Y, hidden_units, seeded)
+    params, seed = init_params(X, Y, hidden_units, seeded, seed)
     cache = ()
     accuracy = 0
     for i in range(0, iterations):
@@ -222,25 +224,70 @@ def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seeded=False):
 
     accuracy = compute_accuracy(cache[5], Y)
 
-    model = {"W1":  params["W1"], "W2":  params["W2"], "b1": params["b1"], "b2": params["b2"]}
-    return model, accuracy, seed
+    # models parameters
+    model = {"W1":  params["W1"], "W2":  params["W2"],
+             "b1": params["b1"], "b2": params["b2"]}
+    # meta information describing the architecture and the training process
+    meta = {"seeded":[seeded, seed], "architecture": {1: hidden_units},
+            "results": {"accuracy": accuracy},
+            "training":{"backprop": "GD", "learning_rate": learning_rate,
+                        "iterations": iterations, "train size":X.shape[1],
+                        "AF":["RELU", "sigmoid"]}}
+    return model, meta, accuracy
 
 
-def save_model(model):
-    with(open)
+def save_model(filename, model_dict, meta):
+    """
+    Saves models weights and additional information about training
+    :param model_dict: models weights
+    :param filename: where to store file
+    :return: None
+    """
+    # ndarray is not directly serializable -> convert it first to list
+    model = {}
+    for k, v in model_dict.items():
+        model[k] = v.tolist()
+
+    with open("models/{}.json".format(filename), 'w') as model_file:
+        json.dump({"model":model, "meta":meta}, model_file)
+
+
+def read_out_model(filename):
+    """
+    Read out previously computed model and its details
+    :param filename: path to teh stored model
+    :return: dict with params and dict with training details
+    """
+    with open("models/{}.json".format(filename), "r") as input_model:
+        try:
+            model_and_meta = json.load(input_model)
+            model = {}
+            for k, v in model_and_meta["model"].items():
+                model[k] = numpy.array(v)
+            return model, model_and_meta["meta"]
+        except Exception:
+            logging.error("Either the file is malformed "
+                          "or it does not contain needed information")
+            return {}, {}
+
 
 if __name__ == '__main__':
-    X_train, Y_train = create_input_structure('training_set.csv')
-    model, accuracy_train = create_and_train_shallow_nn(X_train, Y_train, 5000, 12, True)
-    print("train accuracy is: {}".format(accuracy_train))
+    # X_train, Y_train = create_input_structure('training_set.csv')
+    # model, meta, accuracy_train = create_and_train_shallow_nn(X_train, Y_train, iterations=5000, hidden_units=12, seed=345, seeded=True)
+    # print("train accuracy is: {}".format(accuracy_train))
     X_test, Y_test = create_input_structure('validation_set.csv')
+    # predicted = predict(X_test, model, False)
+    # predicted2 = predict(X_test, model, True)
+    # accuracy_test = compute_accuracy(predicted, Y_test)
+    # print("test accuracy is: {}".format(accuracy_test))
+    #
+    # save_model("test_model1", model, meta)
+    model, meta = read_out_model("test_model1")
+    for k, v in meta.items():
+        print("{}:{}".format(k, v))
     predicted = predict(X_test, model, False)
-    predicted2 = predict(X_test, model, True)
-    accuracy_test = compute_accuracy(predicted, Y_test)
-    print("test accuracy is: {}".format(accuracy_test))
-
-
-    plot_results(None, predicted2.T,  Y_test[0])
+    plot_prediction = predict(X_test, model, True)
+    plot_results(None, plot_prediction.T,  Y_test[0])
 
     # so, technically I am very bad in judging whether Lukas is already awake
     # this is why this bot actually exists -> we don;t have an expert estimate
@@ -249,5 +296,6 @@ if __name__ == '__main__':
     # decreased learning rate and increased amount of the iterations brought almost the desired boost
     # TODO: train model on 5 times bigger data set (?)
     # TODO: allow deeper networks with that takes a dict in key: number of the hidden layer, value: number of the units in the layer
-    # TODO: make models persistent -> save to an external file the weight matrix and the init seed
     # TODO: do I want to implement ADAM or GD with momentum?
+
+    # TODO: rewrite the code for easier usage
