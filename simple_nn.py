@@ -62,40 +62,42 @@ def init_params(X, Y, hidden_units, seeded=False, seed=345):
         params["W"+str(layer)] = numpy.random.rand(hidden_units[layer], m)
         params["b"+str(layer)] = numpy.zeros((hidden_units[layer], 1))
 
+
     return params, seed
 
 
-def forward_prop(X, Y, params):
+def forward_prop(X, Y, params, depth):
     """
     Compute prediction of the network
     :param X: input
     :param Y: output
     :param params: dict containing needed NN params
-    :return: (float) cost and (tuple) all  final params
+    :param depth: amount of layers in the NN
+    :return: (float) cost and (tuple) all final params
     """
     m = X.shape[1]
-    W1 = params["W1"]
-    b1 = params["b1"]
-    W2 = params["W2"]
-    b2 = params["b2"]
+    cache = {"A0": X}
 
-    # RELU
-    Z1 = numpy.dot(W1, X) + b1
-    A1 = numpy.maximum(Z1, 0)
-    # sigmoid
-    Z2 = numpy.dot(W2, A1) + b2
-    A2 = sigmoid(Z2)
+    # here we use n-1 RELU
+    for layer in range(1, depth):
+        cache["Z"+str(layer)] = (numpy.dot(params["W"+str(layer)],
+                                          cache["A"+str(layer-1)])
+                                 + params["b"+str(layer)])
+        cache["A"+str(layer)] = numpy.maximum(cache["Z"+str(layer)], 0)
+
+    # last layer is a binary classifier -> sigmoid
+    cache["Z2"] = numpy.dot(params["W2"], cache["A1"]) + params["b2"]
+    cache["A2"] = sigmoid(cache["Z2"])
 
     # compute cost
-    cost = ((-1 * numpy.sum(numpy.multiply(numpy.log(A2), Y)
-                            + numpy.multiply(numpy.log(1 - A2), 1 - Y))) / m)
-
-    cache = (Z1, A1, W1, b1, Z2, A2, W2, b2)
+    log1 = numpy.multiply(numpy.log(cache["A2"]), Y)
+    log2 = numpy.multiply(numpy.log(1 - cache["A2"]), 1 - Y)
+    cost = (-1 * numpy.sum(log1 + log2)) / m
 
     return cost, cache
 
 
-def back_prop(X, Y, params):
+def back_prop(X, Y, params, cache):
     """
     computes the gradients of the params
     :param X: input
@@ -104,7 +106,8 @@ def back_prop(X, Y, params):
     :return: dict params gradients
     """
     m = X.shape[1]
-    (Z1, A1, W1, b1, Z2, A2, W2, b2) = params
+    (A0, Z1, A1, Z2, A2) = cache
+    (W1, b1,  W2, b2) = params
 
     dZ2 = A2 - Y
     dW2 = 1. / m * numpy.dot(dZ2, A1.T) * 2
@@ -119,6 +122,16 @@ def back_prop(X, Y, params):
                  "dA1": dA1, "dZ1": dZ1, "dW1": dW1, "db1": db1}
 
     return gradients
+
+
+def update_params(params, grads, learning_rate):
+    res = params.copy()
+    res["W1"] -= learning_rate * grads["dW1"]
+    res["W2"] -= learning_rate * grads["dW2"]
+    res["b1"] -= learning_rate * grads["db1"]
+    res["b2"] -= learning_rate * grads["db2"]
+
+    return res
 
 
 def predict(X, model, convert=True, confidence_level=0.7):
@@ -188,7 +201,7 @@ def plot_results(timestamps, A, B):
     plt.show()
 
 
-def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seed, seeded=False):
+def create_and_train_shallow_nn(X, Y, learning_rate, iterations, hidden_units, seed, seeded=False):
     """ Simple numpy implementation of a shallow NN training process:
      1. initialize parameters
      2. forward prop
@@ -210,35 +223,30 @@ def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seed, seeded=Fal
      :return: dict model parameters, meta information
      """
 
-    learning_rate = 0.01
-
     # init params
     params, seed = init_params(X, Y, hidden_units, seeded, seed)
     cache = ()
     accuracy = 0
     for i in range(0, iterations):
         # forward propagation
-        cost, cache = forward_prop(X, Y, params)
+        cost, cache = forward_prop(X, Y, params, len(hidden_units.keys()))
         # compute accuracy
         # if i % 50 == 0:
         #     print("Step {} accuarcy is: {}".format(i, compute_accuracy(cache[5], Y)))
 
         # backward propagation
-        gardients = back_prop(X, Y, cache)
+        gardients = back_prop(X, Y, params.values(), cache.values())
         # update weights
-        params["W1"] -= learning_rate * gardients["dW1"]
-        params["W2"] -= learning_rate * gardients["dW2"]
-        params["b1"] -= learning_rate * gardients["db1"]
-        params["b2"] -= learning_rate * gardients["db2"]
+        params = update_params(params, gardients, learning_rate)
 
 
-    accuracy = compute_accuracy(cache[5], Y)
+    accuracy = compute_accuracy(cache["A2"], Y)
 
     # models parameters
     model = {"W1":  params["W1"], "W2":  params["W2"],
              "b1": params["b1"], "b2": params["b2"]}
     # meta information describing the architecture and the training process
-    meta = {"seeded":[seeded, seed], "architecture": {1: hidden_units},
+    meta = {"seeded":[seeded, seed], "architecture": hidden_units,
             "results": {"accuracy": accuracy},
             "training":{"backprop": "GD", "learning_rate": learning_rate,
                         "iterations": iterations, "train size":X.shape[1],
@@ -286,9 +294,10 @@ if __name__ == '__main__':
     X_test, Y_test = create_input_structure('validation_set.csv')
 
     architecture = {1:12, 2:1}
-    model, meta = create_and_train_shallow_nn(X_train, Y_train, iterations=5000, hidden_units=architecture, seed=345, seeded=True)
-    print("train accuracy is: {}".format(meta["results"]["accuracy"]))
+    model, meta = create_and_train_shallow_nn(X_train, Y_train, learning_rate = 0.01 ,iterations=5000, hidden_units=architecture, seed=345, seeded=True)
 
+    for k, v in meta.items():
+        print(k, v)
     # predicted = predict(X_test, model, False)
     # predicted2 = predict(X_test, model, True)
     # accuracy_test = compute_accuracy(predicted, Y_test)
