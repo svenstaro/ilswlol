@@ -46,16 +46,20 @@ def init_params(X, Y, hidden_units, seeded=False, seed=345):
     The architecture is fixed
     :param X: input
     :param Y: output
-    :param hidden_units: 1 hidden layer with 2 units
+    :param hidden_units: dict describing the architecture
     :return: dict containing params of the model
     """
     if seeded:
         numpy.random.seed(seed)
+    # all params have
     params = {}
-    params["W1"] = numpy.random.rand( hidden_units, X.shape[0])
-    params["b1"] = numpy.zeros((hidden_units, 1))
-    params["W2"] = numpy.random.rand(Y.shape[0], hidden_units)
-    params["b2"] = numpy.zeros((1, 1))
+    for layer in list(hidden_units.keys())[:-1]:
+        params["W{}".format(layer)] = numpy.random.rand(hidden_units[layer], X.shape[0])
+        params["b{}".format(layer)] = numpy.zeros((hidden_units[layer], 1))
+
+    last_layer = max(hidden_units.keys())
+    params["W{}".format(last_layer)] = numpy.random.rand(Y.shape[0], hidden_units[last_layer-1])
+    params["b{}".format(last_layer)] = numpy.zeros((1, 1))
 
     return params, seed
 
@@ -196,8 +200,12 @@ def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seed, seeded=Fal
 
      :param X: features input vector
      :param Y: expected output
+     :param iterations: int amount of recalculations
+     :param hidden_units: dict desired structure {layer_number: amount of units}
+     :param seed: int seed to make results reproducible
+     :param seeded: bool to use seed or not
 
-     :return: model parameters W, b
+     :return: dict model parameters, meta information
      """
 
     learning_rate = 0.01
@@ -233,7 +241,7 @@ def create_and_train_shallow_nn(X, Y, iterations, hidden_units, seed, seeded=Fal
             "training":{"backprop": "GD", "learning_rate": learning_rate,
                         "iterations": iterations, "train size":X.shape[1],
                         "AF":["RELU", "sigmoid"]}}
-    return model, meta, accuracy
+    return model, meta
 
 
 def save_model(filename, model_dict, meta):
@@ -272,30 +280,21 @@ def read_out_model(filename):
 
 
 if __name__ == '__main__':
-    # X_train, Y_train = create_input_structure('training_set.csv')
-    # model, meta, accuracy_train = create_and_train_shallow_nn(X_train, Y_train, iterations=5000, hidden_units=12, seed=345, seeded=True)
-    # print("train accuracy is: {}".format(accuracy_train))
+    X_train, Y_train = create_input_structure('training_set.csv')
     X_test, Y_test = create_input_structure('validation_set.csv')
+
+    architecture = {1:12, 2:1}
+    model, meta = create_and_train_shallow_nn(X_train, Y_train, iterations=5000, hidden_units=architecture, seed=345, seeded=True)
+    print("train accuracy is: {}".format(meta["results"]["accuracy"]))
+
     # predicted = predict(X_test, model, False)
     # predicted2 = predict(X_test, model, True)
     # accuracy_test = compute_accuracy(predicted, Y_test)
     # print("test accuracy is: {}".format(accuracy_test))
-    #
-    # save_model("test_model1", model, meta)
-    model, meta = read_out_model("test_model1")
-    for k, v in meta.items():
-        print("{}:{}".format(k, v))
-    predicted = predict(X_test, model, False)
-    plot_prediction = predict(X_test, model, True)
-    plot_results(None, plot_prediction.T,  Y_test[0])
 
-    # so, technically I am very bad in judging whether Lukas is already awake
-    # this is why this bot actually exists -> we don;t have an expert estimate
-    # thus we do not an avoidable bias, so let's say 93%-95% accuracy will be sufficient
-    # however we have quite a variance problem: increase data amount would be one of the first steps
-    # decreased learning rate and increased amount of the iterations brought almost the desired boost
+    # plot_results(None, predicted2.T,  Y_test[0])
+
     # TODO: train model on 5 times bigger data set (?)
-    # TODO: allow deeper networks with that takes a dict in key: number of the hidden layer, value: number of the units in the layer
     # TODO: do I want to implement ADAM or GD with momentum?
 
-    # TODO: rewrite the code for easier usage
+    # TODO: allow deeper networks with that takes a dict in key: number of the hidden layer, value: number of the units in the layer
