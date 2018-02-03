@@ -6,6 +6,7 @@ import logging
 import matplotlib.pyplot as plt
 import data_processor as process
 
+numpy.warnings.filterwarnings('ignore')
 
 def create_input_structure(filename):
     """
@@ -32,13 +33,6 @@ def create_input_structure(filename):
 
 def sigmoid(x):
    return 1 / (1 + numpy.exp(-x))
-
-
-def transform_probability(x):
-    if x > 0.5:
-        return 1
-    else:
-        return 0
 
 
 def init_params(X, Y, hidden_units, seeded=False, seed=345):
@@ -77,7 +71,6 @@ def forward_prop(X, Y, params, depth):
     """
     m = X.shape[1]
     cache = {"A0": X}
-
     # here we use n-1 RELU
     for layer in range(1, depth):
         cache["Z"+str(layer)] = (numpy.dot(params["W"+str(layer)],
@@ -86,18 +79,20 @@ def forward_prop(X, Y, params, depth):
         cache["A"+str(layer)] = numpy.maximum(cache["Z"+str(layer)], 0)
 
     # last layer is a binary classifier -> sigmoid
-    cache["Z2"] = numpy.dot(params["W2"], cache["A1"]) + params["b2"]
-    cache["A2"] = sigmoid(cache["Z2"])
+    cache["Z"+str(depth)] = numpy.dot(params["W"+str(depth)], cache["A"+str(depth-1)]) + params["b"+str(depth)]
+    cache["A"+str(depth)] = sigmoid(cache["Z"+str(depth)])
 
     # compute cost
-    log1 = numpy.multiply(numpy.log(cache["A2"]), Y)
-    log2 = numpy.multiply(numpy.log(1 - cache["A2"]), 1 - Y)
-    cost = (-1 * numpy.sum(log1 + log2)) / m
-
+    if Y is not None:
+        log1 = numpy.multiply(numpy.log(cache["A"+str(depth)]), Y)
+        log2 = numpy.multiply(numpy.log(1 - cache["A"+str(depth)]), 1 - Y)
+        cost = (-1 * numpy.sum(log1 + log2)) / m
+    else:
+        cost = 0
     return cost, cache
 
 
-def back_prop(X, Y, params, cache):
+def back_prop(X, Y, params, cache, depth):
     """
     computes the gradients of the params
     :param X: input
@@ -106,25 +101,25 @@ def back_prop(X, Y, params, cache):
     :return: dict params gradients
     """
     m = X.shape[1]
-    (A0, Z1, A1, Z2, A2) = cache
-    (W1, b1,  W2, b2) = params
+    grads = {"dZ{}".format(depth): cache["A" + str(depth)] - Y}
+    grads["A0"] = X
 
-    dZ2 = A2 - Y
-    dW2 = 1. / m * numpy.dot(dZ2, A1.T) * 2
-    db2 = 1. / m * numpy.sum(dZ2, axis=1, keepdims=True)
-
-    dA1 = numpy.dot(W2.T, dZ2)
-    dZ1 = numpy.multiply(dA1, numpy.int64(A1 > 0))
-    dW1 = 1. / m * numpy.dot(dZ1, X.T)
-    db1 = 4. / m * numpy.sum(dZ1, axis=1, keepdims=True)
-
-    gradients = {"dZ2": dZ2, "dW2": dW2, "db2": db2,
-                 "dA1": dA1, "dZ1": dZ1, "dW1": dW1, "db1": db1}
-
-    return gradients
+    for i in list(reversed(range(1,depth+1))):
+        if i < depth:
+            grads["dA"+str(i)] = numpy.dot(params["W" + str(i + 1)].T,
+                                           grads["dZ" + str(i + 1)])
+            grads["dZ"+str(i)] = numpy.multiply(grads["dA"+str(i)],
+                                                numpy.int64(cache["A" + str(i)] > 0))
+        grads["dW"+str(i)] = 1. / m * numpy.dot(grads["dZ"+str(i)],
+                                                cache["A" + str(i - 1)].T)
+        grads["db"+str(i)] = 1. / m * numpy.sum(grads["dZ"+str(i)],
+                                                axis=1, keepdims=True)
 
 
-def update_params(params, grads, learning_rate):
+    return grads
+
+
+def update_params(params, grads, learning_rate, depth):
     """
     Update weights
     :param params: dict with model parameters
@@ -132,13 +127,12 @@ def update_params(params, grads, learning_rate):
     :param learning_rate: float decrease ratio
     :return: None
     """
-    params["W1"] -= learning_rate * grads["dW1"]
-    params["W2"] -= learning_rate * grads["dW2"]
-    params["b1"] -= learning_rate * grads["db1"]
-    params["b2"] -= learning_rate * grads["db2"]
+    for i in range(1, depth+1):
+        params["W"+str(i)] -= learning_rate * grads["dW" + str(i)]
+        params["b"+str(i)] -= learning_rate * grads["db"+str(i)]
 
 
-def predict(X, model, convert=True, confidence_level=0.7):
+def predict(X, model, depth, convert=True, confidence_level=0.7):
     """
     computes the outcome of the given NN
     :param X: input
@@ -146,22 +140,19 @@ def predict(X, model, convert=True, confidence_level=0.7):
     :param confidence_level: the probability threshold
     :return: prediction.shape = (X.shape[1], 1)
     """
-    Z1 = numpy.dot(model["W1"], X) + model["b1"]
-    A1 = numpy.maximum(Z1, 0)
-    # sigmoid
-    Z2 = numpy.dot(model["W2"], A1) + model["b2"]
-    A2 = sigmoid(Z2)
+    cost, cache = forward_prop(X, None, model, depth)
+    prediction_prob = cache["A" + str(depth)]
 
     if convert:
         res = []
-        for i in range(0,A2.shape[1]):
-            if A2[0][i] > 0.7:
+        for i in range(0,prediction_prob.shape[1]):
+            if prediction_prob[0][i] > confidence_level:
                 res.append(1)
             else:
                 res.append(0)
         return numpy.array([res])
     else:
-        return A2
+        return prediction_prob
 
 
 def compute_accuracy(prediction, Y, confidence_level=0.7):
@@ -212,10 +203,6 @@ def create_and_train_shallow_nn(X, Y, learning_rate, iterations, hidden_units, s
      3. cost function
      4. backward prop
      5. update the weights
-     learning rate is fixed to=0.02,
-     number of hidden units set to 2,
-     number of hidden layers set to 1
-     using RELU for 1 hidden layer activation and sigmoid for prediction
 
      :param X: features input vector
      :param Y: expected output
@@ -226,27 +213,27 @@ def create_and_train_shallow_nn(X, Y, learning_rate, iterations, hidden_units, s
 
      :return: dict model parameters, meta information
      """
-
     # init params
+    depth = len(hidden_units.keys())
     params, seed = init_params(X, Y, hidden_units, seeded, seed)
     cache = ()
-    accuracy = 0
     for i in range(0, iterations):
         # forward propagation
-        cost, cache = forward_prop(X, Y, params, len(hidden_units.keys()))
+        cost, cache = forward_prop(X, Y, params, depth)
         # backward propagation
-        gradients = back_prop(X, Y, params.values(), cache.values())
+        gradients = back_prop(X, Y, params, cache, depth)
         # update weights
-        update_params(params, gradients, learning_rate)
+        update_params(params, gradients, learning_rate, depth)
 
-
-    accuracy = compute_accuracy(cache["A2"], Y)
+    accuracy = compute_accuracy(cache["A"+str(depth)], Y)
 
     # models parameters
-    model = {"W1":  params["W1"], "W2":  params["W2"],
-             "b1": params["b1"], "b2": params["b2"]}
+    model = {}
+    for k, v in params.items():
+        model[k] = v
     # meta information describing the architecture and the training process
-    meta = {"seeded":[seeded, seed], "architecture": hidden_units,
+    meta = {"seeded":[seeded, seed],
+            "architecture": {"arch": hidden_units, "depth": depth},
             "results": {"accuracy": accuracy},
             "training":{"backprop": "GD", "learning_rate": learning_rate,
                         "iterations": iterations, "train size":X.shape[1],
@@ -293,19 +280,23 @@ if __name__ == '__main__':
     X_train, Y_train = create_input_structure('training_set.csv')
     X_test, Y_test = create_input_structure('validation_set.csv')
 
-    architecture = {1:12, 2:1}
-    model, meta = create_and_train_shallow_nn(X_train, Y_train, learning_rate = 0.01 ,iterations=5000, hidden_units=architecture, seed=345, seeded=True)
+    architecture = {1:12, 2:4, 3:1}
+    model, meta = create_and_train_shallow_nn(X_train, Y_train, learning_rate = 0.01, iterations=5000, hidden_units=architecture, seed=345, seeded=True)
 
     for k, v in meta.items():
         print(k, v)
-    # predicted = predict(X_test, model, False)
-    # predicted2 = predict(X_test, model, True)
-    # accuracy_test = compute_accuracy(predicted, Y_test)
-    # print("test accuracy is: {}".format(accuracy_test))
 
-    # plot_results(None, predicted2.T,  Y_test[0])
+    depth = meta["architecture"]["depth"]
+    predicted = predict(X_test, model, depth, False)
+    predicted2 = predict(X_test, model, depth, True)
+    accuracy_test = compute_accuracy(predicted, Y_test)
+    print("test accuracy is: {}".format(accuracy_test))
+
+    plot_results(None, predicted2.T,  Y_test[0])
 
     # TODO: train model on 5 times bigger data set (?)
     # TODO: do I want to implement ADAM or GD with momentum?
 
     # TODO: allow deeper networks with that takes a dict in key: number of the hidden layer, value: number of the units in the layer
+
+
