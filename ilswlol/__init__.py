@@ -1,9 +1,9 @@
 import os
 import re
+import bs4
 import logging
 
 import requests
-import bs4
 import dateparser
 from datetime import datetime, timedelta
 from jinja2 import Environment, PackageLoader, select_autoescape
