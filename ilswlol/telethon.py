@@ -11,8 +11,11 @@ from telethon.tl.types import (
     UserStatusOnline,
     UserStatusOffline,
 )
+from dotenv import load_dotenv
 
 from ilswlol.loop import loop
+
+load_dotenv(verbose=True)
 
 client = TelegramClient(
     'telegram_client',
