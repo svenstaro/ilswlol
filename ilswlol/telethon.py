@@ -1,25 +1,31 @@
+"""Module for updating and querying the last_seen status of Lukas."""
 import os
 import logging
 import humanize
 from datetime import datetime, timedelta
+from aiocache import SimpleMemoryCache, cached
 from telethon import TelegramClient
 from telethon.errors.rpcbaseerrors import FloodError
 from telethon.events import UserUpdate
 from telethon.tl.types import (
     UserStatusOnline,
     UserStatusOffline,
-    PeerUser,
 )
+
+from ilswlol.loop import loop
 
 client = TelegramClient(
     'telegram_client',
     os.environ['TG_API_ID'],
     os.environ['TG_API_HASH'],
-    update_workers=4
+    update_workers=4,
+    loop=loop,
 )
 # Check whether we are able to connect to telegram
 if not client.connect():
     raise RuntimeError("Couldn't connect to Telegram. Check network and credentials.")
+if not client.is_user_authorized():
+    raise RuntimeError("User is not authorized. Check network and credentials.")
 
 # We need to query lukas's ID once so we are able to filter UserUpdates later on.
 lukas_id = client.get_entity('lukasovich', force_fetch=True).id
@@ -31,31 +37,8 @@ async def get_telegram_confidence():
     """Get last seen status from telethon and calculate the confidence of him being awake."""
     date = None
 
-    last_online_datetime_telegram = cache.get('last_online_datetime_telegram')
-    if last_online_datetime_telegram is None:
-        # The cache expired and we are forced to query manually
-        logging.info("Telegram cache has expired, fetching fresh data.")
-        try:
-            lukas = await client.get_entity('lukasovich', force_fetch=True)
-        except FloodError:
-            logging.critical("Too many Telegram API requests!")
-
-        # Check whether he is online right now or get the last_seen status.
-        if isinstance(lukas.status, UserStatusOnline):
-            date = datetime.utcnow()
-            logging.debug("Currently online in Telegram.")
-        elif isinstance(lukas.status, UserStatusOffline):
-            date = lukas.status.was_online
-            human_delta = humanize.naturaltime(datetime.utcnow() - date)
-            logging.debug(f"Last seen in Telegram at {date} ({human_delta}).")
-        else:
-            raise RuntimeError("Lukas changed his privacy settings. We are fucked.")
-
-        # Update the cache
-        cache.set('last_online_datetime_telegram', date)
-    else:
-        date = last_online_datetime_telegram
-        logging.info(f"Fetched Telegram last online from cache: {date}")
+    date = get_last_seen()
+    logging.info(f"Fetched Telegram last online from cache: {date}")
 
     delta = datetime.utcnow() - date
 
@@ -76,7 +59,30 @@ async def get_telegram_confidence():
     return confidence
 
 
-def update_callback(update):
+@cached(key="telegram", ttl=600)
+async def get_last_seen():
+    # The cache expired and we are forced to query manually
+    logging.info("Telegram cache has expired, fetching fresh data.")
+    try:
+        lukas = await client.get_entity('lukasovich', force_fetch=True)
+    except FloodError:
+        logging.critical("Too many Telegram API requests!")
+
+    # Check whether he is online right now or get the last_seen status.
+    if isinstance(lukas.status, UserStatusOnline):
+        date = datetime.utcnow()
+        logging.debug("Currently online in Telegram.")
+    elif isinstance(lukas.status, UserStatusOffline):
+        date = lukas.status.was_online
+        human_delta = humanize.naturaltime(datetime.utcnow() - date)
+        logging.debug(f"Last seen in Telegram at {date} ({human_delta}).")
+    else:
+        raise RuntimeError("Lukas changed his privacy settings. We are fucked.")
+
+    return date
+
+
+async def update_callback(update):
     """Subscribe on UserUpdate event.
 
     We filter for Lukas's id and save the last_seen time in the cache.
@@ -90,7 +96,7 @@ def update_callback(update):
             human_delta = humanize.naturaltime(datetime.utcnow() - update.last_seen)
             logging.debug(f"Received push update: Last seen in Telegram at {date}"
                           f"({human_delta}).")
-        cache.set('last_online_datetime_telegram', date)
+        SimpleMemoryCache.set("telegram", date, ttl=600)
 
 
 client.add_event_handler(update_callback, UserUpdate)
