@@ -5,42 +5,14 @@ import logging
 import requests
 import bs4
 import dateparser
-import humanize
-from telethon import TelegramClient
-from telethon.tl.types import UserStatusOnline, UpdateUserStatus
-from telethon.errors.rpc_error_list import FloodWaitError
 from datetime import datetime, timedelta
 from flask import Flask, request, render_template, abort
-from werkzeug.contrib.cache import UWSGICache
+
+from ilswlol.telethon import get_telegram_confidence
+from ilswlol.uswgi import cache
 
 app = Flask(__name__)
-cache = UWSGICache(default_timeout=10 * 60)
 lukas_id = None
-
-
-def update_callback(update):
-    if not lukas_id:
-        raise RuntimeError("lukas_id is not set properly!")
-
-    if isinstance(update, UpdateUserStatus) and update.user_id == lukas_id:
-        if isinstance(update.status, UserStatusOnline):
-            date = datetime.utcnow()
-            logging.debug("Received push update: Currently online in Telegram.")
-        else:
-            date = update.status.was_online
-            human_delta = humanize.naturaltime(datetime.utcnow() - date)
-            logging.debug(f"Received push update: Last seen in Telegram at {date}"
-                          f"({human_delta}).")
-        cache.set('last_online_datetime_telegram', date)
-
-
-client = TelegramClient('telegram_client', os.environ['TG_API_ID'], os.environ['TG_API_HASH'],
-                        update_workers=4)
-lukas_id = client.get_entity('lukasovich', force_fetch=True).id
-client.add_update_handler(update_callback)
-if not client.connect():
-    raise RuntimeError("Couldn't connect to Telegram. Check network and credentials.")
-
 
 logging.basicConfig(level='DEBUG', format='%(asctime)s %(levelname)s:%(name)s - %(message)s')
 
@@ -84,49 +56,6 @@ def get_steam_confidence():
     delta = datetime.utcnow() - date
 
     # Check whether Lukas has been online in Steam recently and assign confidence.
-    if delta < timedelta(minutes=5):
-        confidence = 70
-    elif delta < timedelta(minutes=45):
-        confidence = 50
-    elif delta < timedelta(hours=1):
-        confidence = 40
-    elif delta < timedelta(hours=3):
-        confidence = 30
-    elif delta < timedelta(hours=7):
-        confidence = 20
-    else:
-        confidence = 0
-
-    return confidence
-
-
-def get_telegram_confidence():
-    date = None
-
-    last_online_datetime_telegram = cache.get('last_online_datetime_telegram')
-    if last_online_datetime_telegram is None:
-        logging.info("Telegram cache has expired, fetching fresh data.")
-        try:
-            lukas = client.get_entity('lukasovich', force_fetch=True)
-        except FloodWaitError:
-            abort(429)
-            logging.critical("Too many Telegram API requests!")
-
-        if isinstance(lukas.status, UserStatusOnline):
-            date = datetime.utcnow()
-            logging.debug("Currently online in Telegram.")
-        else:
-            date = lukas.status.was_online
-            human_delta = humanize.naturaltime(datetime.utcnow() - date)
-            logging.debug(f"Last seen in Telegram at {date} ({human_delta}).")
-        cache.set('last_online_datetime_telegram', date)
-    else:
-        date = last_online_datetime_telegram
-        logging.info(f"Fetched Telegram last online from cache: {date}")
-
-    delta = datetime.utcnow() - date
-
-    # Check whether Lukas has been online in Telegram recently and assign confidence.
     if delta < timedelta(minutes=5):
         confidence = 70
     elif delta < timedelta(minutes=45):
