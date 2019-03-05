@@ -5,8 +5,6 @@ import requests
 import dateparser
 from datetime import datetime, timedelta
 
-from ilswlol.uwsgi import cache
-
 
 def get_steam_confidence():
     """Get last seen status from steam and calculate the confidence of him being awake."""

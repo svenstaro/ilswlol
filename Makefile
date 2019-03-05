@@ -1,10 +1,9 @@
-
 .PHONY: default
 default: install
 
 .PHONY: install
 install:
-	poetry install
+	poetry install --develop .
 
 .PHONY: run
 run:

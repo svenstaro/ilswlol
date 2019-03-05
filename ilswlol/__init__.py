@@ -4,8 +4,9 @@ import logging
 from jinja2 import Environment, PackageLoader, select_autoescape
 from sanic import Sanic
 from sanic.response import json
-from aiocache import cached, Cache
-from aiocache.serializers import JsonSerializer
+# import aiocache
+# from aiocache import cached, Cache
+# from aiocache.serializers import JsonSerializer
 
 from ilswlol.telethon import get_telegram_confidence
 
