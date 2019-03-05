@@ -1,13 +1,11 @@
-.PHONY: clean default venv run
 
-default: venv
+.PHONY: default
+default: install
 
-venv:
-	python -m venv venv
-	venv/bin/pip install --upgrade -r requirements.txt
+.PHONY: install
+install:
+	poetry install
 
+.PHONY: run
 run:
-	venv/bin/uwsgi --ini uwsgi_local_dev.ini
-
-clean:
-	rm -r venv
+	poetry run python ilswlol/main.py
