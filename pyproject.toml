@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "ilswlol"
+version = "0.1.0"
+description = "Wer weiss?"
+authors = ["Sven-Hendrik Haase <svenstaro@gmail.com>", "Arne Beer <contact@arne.beer>"]
+license = "MIT"
+repository = "https://github.com/svenstaro/ilswlol"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+sanic = "^18.12"
+telethon = "^1.6"
+requests = "^2.21"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

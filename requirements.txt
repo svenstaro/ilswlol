@@ -1,7 +1,0 @@
-flask
-requests
-beautifulsoup4
-dateparser
-telethon
-humanize
-uwsgi
