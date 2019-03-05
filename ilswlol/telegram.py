@@ -13,34 +13,24 @@ from telethon.tl.types import (
 )
 from dotenv import load_dotenv
 
-from ilswlol.loop import loop
+from ilswlol import loop
 
 load_dotenv(verbose=True)
 
+lukas_id = None
 client = TelegramClient(
     'telegram_client',
     os.environ['TG_API_ID'],
     os.environ['TG_API_HASH'],
-    update_workers=4,
     loop=loop,
 )
-# Check whether we are able to connect to telegram
-if not client.connect():
-    raise RuntimeError("Couldn't connect to Telegram. Check network and credentials.")
-if not client.is_user_authorized():
-    raise RuntimeError("User is not authorized. Check network and credentials.")
-
-# We need to query lukas's ID once so we are able to filter UserUpdates later on.
-lukas_id = client.get_entity('lukasovich', force_fetch=True).id
-if not lukas_id:
-    raise RuntimeError("lukas_id is not set properly!")
 
 
 async def get_telegram_confidence():
     """Get last seen status from telethon and calculate the confidence of him being awake."""
     date = None
 
-    date = get_last_seen()
+    date = await get_last_seen()
     logging.info(f"Fetched Telegram last online from cache: {date}")
 
     delta = datetime.utcnow() - date
@@ -67,7 +57,7 @@ async def get_last_seen():
     # The cache expired and we are forced to query manually
     logging.info("Telegram cache has expired, fetching fresh data.")
     try:
-        lukas = await client.get_entity('lukasovich', force_fetch=True)
+        lukas = await client.get_entity('lukasovich')
     except FloodError:
         logging.critical("Too many Telegram API requests!")
 
@@ -101,5 +91,19 @@ async def update_callback(update):
                           f"({human_delta}).")
         SimpleMemoryCache.set("telegram", date, ttl=600)
 
+async def init_telegram():
+    """Initialize some Telegram stuff."""
 
+    # Check whether we are able to connect to telegram
+    await client.connect()
+    if not await client.is_user_authorized():
+        raise RuntimeError("User is not authorized. Check network and credentials.")
+
+    # We need to query lukas's ID once so we are able to filter UserUpdates later on.
+    lukas = await client.get_entity('lukasovich')
+    lukas_id = lukas.id
+    if not lukas_id:
+        raise RuntimeError("lukas.id is not set properly!")
+
+loop.run_until_complete(init_telegram())
 client.add_event_handler(update_callback, UserUpdate)

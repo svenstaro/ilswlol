@@ -64,6 +64,7 @@ venv
 
 # local dev stuff
 *.session
+*.session-journal
 .env
 
 # Ansible stuff

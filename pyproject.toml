@@ -10,13 +10,13 @@ repository = "https://github.com/svenstaro/ilswlol"
 python = "^3.7"
 sanic = "^18.12"
 telethon = "^1.6"
-requests = "^2.21"
 jinja2 = "^2.10"
 beautifulsoup4 = "^4.7"
 dateparser = "^0.7.1"
 humanize = "^0.5.1"
 aiocache = "^0.10.1"
 python-dotenv = "^0.10.1"
+aiohttp = "^3.5"
 
 [tool.poetry.dev-dependencies]
 

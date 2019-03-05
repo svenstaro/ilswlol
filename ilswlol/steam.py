@@ -1,17 +1,17 @@
 import bs4
 import re
 import logging
-import requests
+import aiohttp
 import dateparser
 from datetime import datetime, timedelta
 from aiocache import cached
 
 
-def get_steam_confidence():
+async def get_steam_confidence():
     """Get last seen status from steam and calculate the confidence of him being awake."""
     date = None
 
-    date = get_last_seen()
+    date = await get_last_seen()
     logging.info(f"Fetched Steam last online from cache: {date}")
 
     delta = datetime.utcnow() - date
@@ -34,12 +34,14 @@ def get_steam_confidence():
 
 
 @cached(key="steam", ttl=600)
-def get_last_seen():
+async def get_last_seen():
     logging.info("Steam cache has expired, fetching fresh data.")
 
     # Check using steam profile.
-    steamprofile = requests.get("http://steamcommunity.com/id/Ahti333")
-    soup = bs4.BeautifulSoup(steamprofile.text, "html.parser")
+    soup = None
+    async with aiohttp.ClientSession() as session:
+        async with session.get("http://steamcommunity.com/id/Ahti333") as resp:
+            soup = bs4.BeautifulSoup(resp.text, "html.parser")
 
     online_offline_info = soup.find(class_='responsive_status_info')
 

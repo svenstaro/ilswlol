@@ -4,10 +4,10 @@ import asyncio
 import logging
 from aiocache import cached, SimpleMemoryCache
 
-# from ilswlol.telethon import get_telegram_confidence
+import asyncio
 
-from ilswlol.loop import loop
-from ilswlol.telethon import get_telegram_confidence
+loop = asyncio.get_event_loop()
+from ilswlol.telegram import get_telegram_confidence
 from ilswlol.app import app
 
 logging.basicConfig(level='DEBUG', format='%(asctime)s %(levelname)s:%(name)s - %(message)s')
