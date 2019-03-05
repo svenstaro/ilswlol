@@ -3,9 +3,13 @@ import logging
 import humanize
 from datetime import datetime, timedelta
 from telethon import TelegramClient
-from telethon.tl.types import UserStatusOnline, UpdateUserStatus, PeerUser
 from telethon.errors.rpcbaseerrors import FloodError
 from telethon.events import UserUpdate
+from telethon.tl.types import (
+    UserStatusOnline,
+    UserStatusOffline,
+    PeerUser,
+)
 
 from ilswlol.uswgi import cache
 
@@ -31,19 +35,25 @@ async def get_telegram_confidence():
 
     last_online_datetime_telegram = cache.get('last_online_datetime_telegram')
     if last_online_datetime_telegram is None:
+        # The cache expired and we are forced to query manually
         logging.info("Telegram cache has expired, fetching fresh data.")
         try:
             lukas = await client.get_entity('lukasovich', force_fetch=True)
         except FloodError:
             logging.critical("Too many Telegram API requests!")
 
+        # Check whether he is online right now or get the last_seen status.
         if isinstance(lukas.status, UserStatusOnline):
             date = datetime.utcnow()
             logging.debug("Currently online in Telegram.")
-        else:
+        elif isinstance(lukas.status, UserStatusOffline):
             date = lukas.status.was_online
             human_delta = humanize.naturaltime(datetime.utcnow() - date)
             logging.debug(f"Last seen in Telegram at {date} ({human_delta}).")
+        else:
+            raise RuntimeError("Lukas changed his privacy settings. We are fucked.")
+
+        # Update the cache
         cache.set('last_online_datetime_telegram', date)
     else:
         date = last_online_datetime_telegram
