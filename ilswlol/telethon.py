@@ -4,7 +4,7 @@ import humanize
 from datetime import datetime, timedelta
 from telethon import TelegramClient
 from telethon.tl.types import UserStatusOnline, UpdateUserStatus, PeerUser
-# from telethon.errors.rpc_error_list import FloodWaitError
+from telethon.errors.rpcbaseerrors import FloodError
 from telethon.events import UserUpdate
 
 from ilswlol.uswgi import cache
@@ -33,8 +33,8 @@ async def get_telegram_confidence():
     if last_online_datetime_telegram is None:
         logging.info("Telegram cache has expired, fetching fresh data.")
         try:
-            lukas = await client.get_entity(PeerUser('lukasovich'), force_fetch=True)
-        except FloodWaitError:
+            lukas = await client.get_entity('lukasovich', force_fetch=True)
+        except FloodError:
             logging.critical("Too many Telegram API requests!")
 
         if isinstance(lukas.status, UserStatusOnline):
