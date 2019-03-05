@@ -9,9 +9,10 @@ from datetime import datetime, timedelta
 from jinja2 import Environment, PackageLoader, select_autoescape
 from sanic import Sanic
 from sanic.response import json
+from aiocache import cached, Cache
+from aiocache.serializers import JsonSerializer
 
 from ilswlol.telethon import get_telegram_confidence
-from ilswlol.uswgi import cache
 
 logging.basicConfig(level='DEBUG', format='%(asctime)s %(levelname)s:%(name)s - %(message)s')
 
@@ -38,9 +39,6 @@ async def index(request):
             return "NEIN"
         else:
             return template.render('index.html', schon_wach=False)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
 
 
 # def is_curl_like(user_agent_string):

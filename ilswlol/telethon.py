@@ -4,7 +4,7 @@ import humanize
 from datetime import datetime, timedelta
 from telethon import TelegramClient
 from telethon.tl.types import UserStatusOnline, UpdateUserStatus, PeerUser
-from telethon.errors.rpc_error_list import FloodWaitError
+# from telethon.errors.rpc_error_list import FloodWaitError
 from telethon.events import UserUpdate
 
 from ilswlol.uswgi import cache
