@@ -4,15 +4,14 @@ import logging
 from jinja2 import Environment, PackageLoader, select_autoescape
 from sanic import Sanic
 from sanic.response import json
-# import aiocache
-# from aiocache import cached, Cache
-# from aiocache.serializers import JsonSerializer
+from aiocache import cached, SimpleMemoryCache
+from aiocache.serializers import JsonSerializer
 
-from ilswlol.telethon import get_telegram_confidence
+# from ilswlol.telethon import get_telegram_confidence
 
 logging.basicConfig(level='DEBUG', format='%(asctime)s %(levelname)s:%(name)s - %(message)s')
 
-app = Sanic()
+app = Sanic(__name__)
 env = Environment(
     loader=PackageLoader('ilswlol', 'templates'),
     autoescape=select_autoescape(['html'])
