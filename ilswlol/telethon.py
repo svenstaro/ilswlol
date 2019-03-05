@@ -11,8 +11,6 @@ from telethon.tl.types import (
     PeerUser,
 )
 
-from ilswlol.uswgi import cache
-
 client = TelegramClient(
     'telegram_client',
     os.environ['TG_API_ID'],
