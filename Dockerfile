@@ -7,5 +7,5 @@ RUN pip3 install poetry && poetry install
 
 EXPOSE 8000
 
-CMD ["poetry", "run", "python", "ilswlol/main.py"]
+CMD ["poetry", "run", "python", "-m", "sanic", "ilswlol.app", "--host=0.0.0.0", "--port=8080", "--workers=4"]
 
