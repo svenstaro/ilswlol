@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Entry point for ILSW lol app."""
+"""Entry point for ilswlol."""
 from signal import signal, SIGINT
 import asyncio
 
