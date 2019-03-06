@@ -41,7 +41,7 @@ async def get_last_seen():
     soup = None
     async with aiohttp.ClientSession() as session:
         async with session.get("http://steamcommunity.com/id/Ahti333") as resp:
-            soup = bs4.BeautifulSoup(resp.text, "html.parser")
+            soup = bs4.BeautifulSoup(await resp.text(), "html.parser")
 
     online_offline_info = soup.find(class_='responsive_status_info')
 
