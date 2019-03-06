@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from signal import signal, SIGINT
 import asyncio
 import uvloop
