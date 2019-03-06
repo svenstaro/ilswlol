@@ -15,6 +15,10 @@ from dotenv import load_dotenv
 
 from ilswlol import loop
 
+import asyncio
+if loop is None:
+    loop = asyncio.get_event_loop()
+
 load_dotenv(verbose=True)
 
 lukas_id = None
@@ -33,7 +37,7 @@ async def get_telegram_confidence():
     date = await get_last_seen()
     logging.info(f"Fetched Telegram last online from cache: {date}")
 
-    delta = datetime.utcnow() - date
+    delta = datetime.now(date.tzinfo) - date
 
     # Check whether Lukas has been online in Telegram recently and assign confidence.
     if delta < timedelta(minutes=5):
@@ -68,7 +72,7 @@ async def get_last_seen():
         logging.debug("Currently online in Telegram.")
     elif isinstance(lukas.status, UserStatusOffline):
         date = lukas.status.was_online
-        human_delta = humanize.naturaltime(datetime.utcnow() - date)
+        human_delta = humanize.naturaltime(datetime.now(date.tzinfo) - date)
         logging.debug(f"Last seen in Telegram at {date} ({human_delta}).")
     else:
         raise RuntimeError("Lukas changed his privacy settings. We are fucked.")
@@ -87,7 +91,7 @@ async def update_callback(update):
             logging.debug("Received push update: Currently online in Telegram.")
         else:
             date = update.last_seen
-            human_delta = humanize.naturaltime(datetime.utcnow() - update.last_seen)
+            human_delta = humanize.naturaltime(datetime.now(date.tzinfo) - update.last_seen)
             logging.debug(f"Received push update: Last seen in Telegram at {date}"
                           f"({human_delta}).")
         SimpleMemoryCache.set("telegram", date, ttl=600)
