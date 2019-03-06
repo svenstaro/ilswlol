@@ -2,6 +2,7 @@
 import os
 import logging
 import humanize
+import asyncio
 from datetime import datetime, timedelta
 from aiocache import SimpleMemoryCache, cached
 from telethon import TelegramClient
@@ -13,11 +14,7 @@ from telethon.tl.types import (
 )
 from dotenv import load_dotenv
 
-from ilswlol import loop
-
-import asyncio
-if loop is None:
-    loop = asyncio.get_event_loop()
+loop = asyncio.get_event_loop()
 
 load_dotenv(verbose=True)
 
