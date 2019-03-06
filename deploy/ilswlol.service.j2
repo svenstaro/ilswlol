@@ -1,0 +1,10 @@
+[Unit]
+Description=ilswlol
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/poetry run python runner.py
+WorkingDirectory={{ site_path }}
+
+[Install]
+WantedBy=default.target

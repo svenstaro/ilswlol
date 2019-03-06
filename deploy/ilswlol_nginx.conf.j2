@@ -7,7 +7,6 @@ server {
     error_log   /var/log/nginx/{{ site_url }}/error.log;
 
     location / {
-        include uwsgi_params;
-        uwsgi_pass unix:/run/uwsgi/{{ site_url }}.sock;
+        proxy_pass http://localhost:8080/;
     }
 }

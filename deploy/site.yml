@@ -1,0 +1,52 @@
+---
+
+- name: deploy ilswlol
+  hosts: tank
+  remote_user: svenstaro
+  vars:
+    site_url: ilswlol.customalized.org
+    site_path: /home/svenstaro/prj/ilswlol
+  tasks:
+  - name: install poetry
+    pacman: name=poetry update_cache=yes
+    become: yes
+    become_user: root
+
+  - name: pull git repo
+    git: accept_hostkey=yes
+         force=yes
+         recursive=yes
+         repo=git://github.com/svenstaro/ilswlol.git
+         dest={{ site_path }}
+    notify:
+      - restart systemd service
+
+  - name: install dependencies
+    command: make install
+    args:
+      chdir: '{{ site_path }}'
+
+  - name: create nginx log directory
+    file: owner=http group=log mode=750 state=directory path=/var/log/nginx/{{ site_url }}
+    become: yes
+    become_user: root
+
+  - name: systemd user service
+    template: src=ilswlol.service.j2 dest=/home/svenstaro/.config/systemd/user/ilswlol.service owner=svenstaro group=svenstaro mode=640
+    notify:
+      - restart systemd service
+
+  - name: configure nginx
+    template: src=ilswlol_nginx.conf.j2 dest=/etc/nginx/vhosts/{{ site_url }}.conf owner=root group=root mode=644
+    notify:
+      - restart nginx
+    become: yes
+    become_user: root
+
+  handlers:
+    - name: restart nginx
+      systemd: name=nginx state=restarted
+      become: yes
+      become_user: root
+    - name: restart systemd service
+      systemd: name=ilswlol state=restarted daemon_reload=yes scope=user
