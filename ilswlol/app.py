@@ -1,6 +1,6 @@
 """The Sanic module for answering requests."""
+import logging
 from sanic import Sanic, response
-from aiocache import SimpleMemoryCache
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from ilswlol.steam import get_steam_confidence

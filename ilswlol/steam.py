@@ -1,3 +1,4 @@
+"""Module for updating and querying the last_seen status of Lukas from steam."""
 import bs4
 import re
 import logging
@@ -35,6 +36,7 @@ async def get_steam_confidence():
 
 @cached(key="steam", ttl=600)
 async def get_last_seen():
+    """Get the last_seen status from cache or query it manually."""
     logging.info("Steam cache has expired, fetching fresh data.")
 
     # Check using steam profile.

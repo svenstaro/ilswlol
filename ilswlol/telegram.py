@@ -1,4 +1,4 @@
-"""Module for updating and querying the last_seen status of Lukas."""
+"""Module for updating and querying the last_seen status of Lukas from telegram."""
 import os
 import logging
 import humanize
@@ -54,6 +54,7 @@ async def get_telegram_confidence():
 
 @cached(key="telegram", ttl=600)
 async def get_last_seen():
+    """Get the last_seen status from cache or query it manually."""
     # The cache expired and we are forced to query manually
     logging.info("Telegram cache has expired, fetching fresh data.")
     try:
@@ -91,9 +92,9 @@ async def update_callback(update):
                           f"({human_delta}).")
         SimpleMemoryCache.set("telegram", date, ttl=600)
 
+
 async def init_telegram():
     """Initialize some Telegram stuff."""
-
     # Check whether we are able to connect to telegram
     await client.connect()
     if not await client.is_user_authorized():
