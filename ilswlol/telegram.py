@@ -18,13 +18,14 @@ loop = asyncio.get_event_loop()
 
 load_dotenv(verbose=True)
 
-lukas_id = None
 client = TelegramClient(
     'telegram_client',
     os.environ['TG_API_ID'],
     os.environ['TG_API_HASH'],
     loop=loop,
 )
+
+cache = SimpleMemoryCache()
 
 
 async def get_telegram_confidence():
@@ -57,7 +58,7 @@ async def get_telegram_confidence():
 async def get_last_seen():
     """Get the last_seen status from cache or query it manually."""
     # The cache expired and we are forced to query manually
-    cooldown_is_active = SimpleMemoryCache.get("telegram_cooldown", default=False)
+    cooldown_is_active = await cache.get("telegram_cooldown", default=False)
     if cooldown_is_active:
         logging.info("Telegram cache has expired but Telegram API request cooldown is active. Assuming lukas was never online")
         return datetime.min
@@ -67,17 +68,17 @@ async def get_last_seen():
         lukas = await client.get_entity('lukasovich')
     except FloodError:
         logging.critical("Too many Telegram API requests, engaging cooldown")
-        SimpleMemoryCache.set("telegram_cooldown", True, ttl=3600)
+        await cache.set("telegram_cooldown", True, ttl=3600)
         raise RuntimeError("Too many Telegram API requests")
 
     # Check whether he is online right now or get the last_seen status.
     if isinstance(lukas.status, UserStatusOnline):
         date = datetime.utcnow()
-        logging.debug("Currently online in Telegram.")
+        logging.info("Currently online in Telegram.")
     elif isinstance(lukas.status, UserStatusOffline):
         date = lukas.status.was_online
         human_delta = humanize.naturaltime(datetime.now(date.tzinfo) - date)
-        logging.debug(f"Last seen in Telegram at {date} ({human_delta}).")
+        logging.info(f"Last seen in Telegram at {date} ({human_delta}).")
     else:
         raise RuntimeError("Lukas changed his privacy settings. We are fucked.")
 
@@ -89,16 +90,21 @@ async def update_callback(update):
 
     We filter for Lukas's id and save the last_seen time in the cache.
     """
+    lukas_id = await cache.get("lukas_id")
+    logging.info(f"Retrieved lukas_id: {lukas_id}")
+    if not lukas_id:
+        raise RuntimeError("lukas_id is not set properly!")
+
     if update.user_id == lukas_id:
         if update.online:
             date = datetime.utcnow()
-            logging.debug("Received push update: Currently online in Telegram.")
+            logging.info("Received push update: Currently online in Telegram.")
         else:
             date = update.last_seen
             human_delta = humanize.naturaltime(datetime.now(date.tzinfo) - update.last_seen)
-            logging.debug(f"Received push update: Last seen in Telegram at {date}"
+            logging.info(f"Received push update: Last seen in Telegram at {date}"
                           f"({human_delta}).")
-        SimpleMemoryCache.set("telegram", date, ttl=600)
+        await cache.set("telegram", date, ttl=600)
 
 
 async def init_telegram():
@@ -110,9 +116,8 @@ async def init_telegram():
 
     # We need to query lukas's ID once so we are able to filter UserUpdates later on.
     lukas = await client.get_entity('lukasovich')
-    lukas_id = lukas.id
-    if not lukas_id:
-        raise RuntimeError("lukas.id is not set properly!")
+    await cache.set("lukas_id", lukas.id)
+    logging.info(f"Setting lukas_id to {lukas.id}")
 
 loop.run_until_complete(init_telegram())
 client.add_event_handler(update_callback, UserUpdate)
