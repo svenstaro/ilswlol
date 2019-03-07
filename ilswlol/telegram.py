@@ -57,11 +57,18 @@ async def get_telegram_confidence():
 async def get_last_seen():
     """Get the last_seen status from cache or query it manually."""
     # The cache expired and we are forced to query manually
+    cooldown_is_active = SimpleMemoryCache.get("telegram_cooldown", default=False)
+    if cooldown_is_active:
+        logging.info("Telegram cache has expired but Telegram API request cooldown is active. Assuming lukas was never online")
+        return datetime.min
+
     logging.info("Telegram cache has expired, fetching fresh data.")
     try:
         lukas = await client.get_entity('lukasovich')
     except FloodError:
-        logging.critical("Too many Telegram API requests!")
+        logging.critical("Too many Telegram API requests, engaging cooldown")
+        SimpleMemoryCache.set("telegram_cooldown", True, ttl=3600)
+        raise RuntimeError("Too many Telegram API requests")
 
     # Check whether he is online right now or get the last_seen status.
     if isinstance(lukas.status, UserStatusOnline):
