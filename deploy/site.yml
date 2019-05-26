@@ -36,6 +36,9 @@
     notify:
       - restart systemd service
 
+  - name: enable systemd user service
+    systemd: name=ilswlol scope=user enabled=yes state=started daemon_reload=yes
+
   - name: configure nginx
     template: src=ilswlol_nginx.conf.j2 dest=/etc/nginx/vhosts/{{ site_url }}.conf owner=root group=root mode=644
     notify:
